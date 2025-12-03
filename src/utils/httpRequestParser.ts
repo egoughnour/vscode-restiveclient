@@ -30,7 +30,7 @@ interface OutgoingRequest {
     url: string;
     method: string;
     headers: RequestHeaders;
-    body?: string | Buffer | Stream;
+    body?: string | Stream;
     // other properties here as needed
 }
 
@@ -46,14 +46,6 @@ async function maybePatchJsonBody(
 
     const jsonPatchHeaderName = config.get<string>('restive-client.jsonPatchHeaderName', 'X-RestiveClient-JsonPatch');
     const headerNameLower = jsonPatchHeaderName.toLowerCase();
-
-    const contentTypeHeader = getContentType(request.headers);
-    if (!MimeUtility.isJSON(contentTypeHeader)) {
-        return;
-    }
-    if(typeof request.body !== 'string') {
-        return;
-    }
 
     const patchHeaderValues: string[] = [];
     for (const [name, value] of Object.entries(request.headers)) {
@@ -72,6 +64,26 @@ async function maybePatchJsonBody(
         return;
     }
 
+    const contentTypeHeader = getContentType(request.headers);
+    if (!MimeUtility.isJSON(contentTypeHeader)) {
+        stripPatchHeaders(request.headers, headerNameLower);
+        return;
+    }
+
+    let bodyText: string | undefined;
+    if (typeof request.body === 'string') {
+        bodyText = request.body;
+    } else if (Buffer.isBuffer(request.body)) {
+        bodyText = request.body.toString();
+    } else if (request.body instanceof Stream) {
+        bodyText = await convertStreamToString(request.body);
+    }
+
+    if (bodyText === undefined) {
+        stripPatchHeaders(request.headers, headerNameLower);
+        return;
+    }
+
     const rules = parseJsonPatchHeaderValue(patchHeaderValues);
     if (rules.length === 0) {
         stripPatchHeaders(request.headers, headerNameLower);
@@ -79,11 +91,12 @@ async function maybePatchJsonBody(
     }
 
     const patchedBody = await applyJsonPathPokes(
-        request.body,
+        bodyText,
         rules,
         resolveVariables
     );
     request.body = patchedBody;
+    stripPatchHeaders(request.headers, headerNameLower);
 }
 
 function stripPatchHeaders(
@@ -205,7 +218,7 @@ export class HttpRequestParser implements RequestParser {
             headers,
             body,
         };
-        if (outgoingRequest.body && typeof outgoingRequest.body === 'string') {
+        if (outgoingRequest.body) {
             await maybePatchJsonBody(
                 outgoingRequest,
                 async (text: string) => VariableProcessor.processRawRequest(text)
