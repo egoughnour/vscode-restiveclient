@@ -9,8 +9,8 @@ Restive Client allows you to send HTTP request and view the response in Visual S
 
 ## Main Features
 * Pre-request modification of non-templated files (_i.e._, __file__ custom variables), including updates via:
-    - JSONPath (_in progress_)  
-    - XPath (_a stretch goal_)
+    - JSONPath (_under testing_)  
+    - XPath (_current_)
 * Send/Cancel/Rerun __HTTP request__ in editor and view response in a separate pane with syntax highlight
 * Send __GraphQL query__ and author __GraphQL variables__ in editor
 * Send __cURL command__ in editor and copy HTTP request as `cURL command`
