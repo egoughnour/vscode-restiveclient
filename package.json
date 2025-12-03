@@ -713,7 +713,8 @@
     "vscode:prepublish": "webpack --mode production",
     "webpack": "webpack --mode development",
     "watch": "webpack --mode development --watch",
-    "tslint": "tslint --project tsconfig.json"
+    "tslint": "tslint --project tsconfig.json",
+    "test": "mocha -r tests/ts-hook.js \"tests/**/*.test.ts\""
   },
   "devDependencies": {
     "@types/aws4": "^1.5.1",
