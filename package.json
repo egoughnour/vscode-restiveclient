@@ -2,7 +2,7 @@
   "name": "restive-client",
   "displayName": "Restive Client",
   "description": "Restive Client for Visual Studio Code",
-  "version": "0.26.0",
+  "version": "0.27.0",
   "publisher": "egoughnour",
   "author": {
     "name": "Erik Goughnour",
@@ -352,14 +352,14 @@
       "properties": {
         "restive-client.enableJsonBodyPatching": {
           "type": "boolean",
-           "default": true,
-           "description": "Enable JSONPath-based patching of JSON request bodies using a special HTTP header."
-         },
-         "restive-client.jsonPatchHeaderName": {
-           "type": "string",
-           "default": "X-RestClient-JsonPatch",
-           "description": "Header name that carries JSONPath patch instructions. The header is stripped before the request is sent."
-         },
+          "default": true,
+          "description": "Enable JSONPath-based patching of JSON request bodies using a special HTTP header."
+        },
+        "restive-client.jsonPatchHeaderName": {
+          "type": "string",
+          "default": "X-RestClient-JsonPatch",
+          "description": "Header name that carries JSONPath patch instructions. The header is stripped before the request is sent."
+        },
         "restive-client.followredirect": {
           "type": "boolean",
           "default": true,

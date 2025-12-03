@@ -30,7 +30,7 @@ interface OutgoingRequest {
     url: string;
     method: string;
     headers: RequestHeaders;
-    body?: string | Buffer | Stream;
+    body?: string | Stream;
     // other properties here as needed
 }
 
