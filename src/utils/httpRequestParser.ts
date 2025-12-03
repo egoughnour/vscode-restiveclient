@@ -1,6 +1,11 @@
 import * as fs from 'fs-extra';
 import { EOL } from 'os';
 import { Stream } from 'stream';
+import { workspace } from 'vscode';
+import { 
+    applyJsonPathPokes,
+    parseJsonPatchHeaderValue
+ } from './jsonPathBodyPatcher';
 import { IRestClientSettings } from '../models/configurationSettings';
 import { FormParamEncodingStrategy } from '../models/formParamEncodingStrategy';
 import { HttpRequest } from '../models/httpRequest';
@@ -18,6 +23,71 @@ enum ParseState {
     URL,
     Header,
     Body,
+}
+
+interface OutgoingRequest {
+    url: string;
+    method: string;
+    headers: { [name: string]: string };
+    body?: string | Buffer;
+    // other properties here as needed
+}
+
+async function maybePatchJsonBody(
+    request: OutgoingRequest,
+    resolveVariables: (text: string) => Promise<string>
+): Promise<void> {
+    const config = workspace.getConfiguration();
+    const enableJsonBodyPatching = config.get<boolean>('restive-client.enableJsonBodyPatching', true);
+    if (!enableJsonBodyPatching) {
+        return;
+    }
+
+    const jsonPatchHeaderName = config.get<string>('restive-client.jsonPatchHeaderName', 'X-RestiveClient-JsonPatch');
+    const headerNameLower = jsonPatchHeaderName.toLowerCase();
+
+    const contentTypeHeader = getContentType(request.headers);
+    if (!MimeUtility.isJSON(contentTypeHeader)) {
+        return;
+    }
+    if(typeof request.body !== 'string') {
+        return;
+    }
+
+    const patchHeaderValues : string[] = [];
+    for (const [name, value] of Object.entries(request.headers)) {
+        if (name.toLowerCase() === headerNameLower) {
+            patchHeaderValues.push(value);
+        }
+    }
+    if (patchHeaderValues.length === 0) {
+        return;
+    }
+
+    const rules = parseJsonPatchHeaderValue(patchHeaderValues);
+    if (rules.length === 0) {
+        stripPatchHeaders(request.headers, headerNameLower);
+        return;
+    }
+
+    const patchedBody = await applyJsonPathPokes(
+        request.body,
+        rules,
+        resolveVariables
+    );
+    request.body = patchedBody;
+}
+
+function stripPatchHeaders(
+    headers: { [name: string]: string },
+    headerNameLower: string
+): void {
+    for (const name of Object.keys(headers)) {
+        if (name.toLowerCase() === headerNameLower) {
+            //eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+            delete headers[name];
+        }
+    }
 }
 
 export class HttpRequestParser implements RequestParser {
@@ -120,6 +190,19 @@ export class HttpRequestParser implements RequestParser {
             const [, port] = host.toString().split(':');
             const scheme = port === '443' || port === '8443' ? 'https' : 'http';
             requestLine.url = `${scheme}://${host}${requestLine.url}`;
+        }
+        const outgoingRequest: OutgoingRequest = {
+            url: requestLine.url,
+            method: requestLine.method,
+            headers,
+            body,
+        };
+        if (outgoingRequest.body && typeof outgoingRequest.body === 'string') {
+            await maybePatchJsonBody(
+                outgoingRequest,
+                async (text: string) => VariableProcessor.processRawRequest(text)
+            );
+            body = outgoingRequest.body;
         }
 
         return new HttpRequest(requestLine.method, requestLine.url, headers, body, bodyLines.join(EOL), name);
