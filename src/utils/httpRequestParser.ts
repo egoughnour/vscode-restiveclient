@@ -9,6 +9,7 @@ import {
 import { IRestClientSettings } from '../models/configurationSettings';
 import { FormParamEncodingStrategy } from '../models/formParamEncodingStrategy';
 import { HttpRequest } from '../models/httpRequest';
+import { RequestHeaders } from '../models/base';
 import { RequestParser } from '../models/requestParser';
 import { MimeUtility } from './mimeUtility';
 import { getContentType, getHeader, removeHeader } from './misc';
@@ -28,8 +29,8 @@ enum ParseState {
 interface OutgoingRequest {
     url: string;
     method: string;
-    headers: { [name: string]: string };
-    body?: string | Buffer;
+    headers: RequestHeaders;
+    body?: string | Buffer | Stream;
     // other properties here as needed
 }
 
@@ -54,10 +55,17 @@ async function maybePatchJsonBody(
         return;
     }
 
-    const patchHeaderValues : string[] = [];
+    const patchHeaderValues: string[] = [];
     for (const [name, value] of Object.entries(request.headers)) {
-        if (name.toLowerCase() === headerNameLower) {
+        if (name.toLowerCase() !== headerNameLower) {
+            continue;
+        }
+        if (typeof value === 'string') {
             patchHeaderValues.push(value);
+        } else if (Array.isArray(value)) {
+            patchHeaderValues.push(...value);
+        } else if (typeof value === 'number') {
+            patchHeaderValues.push(String(value));
         }
     }
     if (patchHeaderValues.length === 0) {
@@ -79,7 +87,7 @@ async function maybePatchJsonBody(
 }
 
 function stripPatchHeaders(
-    headers: { [name: string]: string },
+    headers: RequestHeaders,
     headerNameLower: string
 ): void {
     for (const name of Object.keys(headers)) {
