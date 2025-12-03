@@ -1,27 +1,27 @@
 {
-  "name": "rest-client",
-  "displayName": "REST Client",
-  "description": "REST Client for Visual Studio Code",
+  "name": "restive-client",
+  "displayName": "Restive Client",
+  "description": "Restive Client for Visual Studio Code",
   "version": "0.26.0",
-  "publisher": "humao",
+  "publisher": "egoughnour",
   "author": {
-    "name": "Huachao Mao",
-    "email": "huachaomao@gmail.com"
+    "name": "Erik Goughnour",
+    "email": "e.goughnour@gmail.com"
   },
-  "icon": "images/rest_icon.png",
+  "icon": "images/restive_icon.png",
   "galleryBanner": {
     "color": "#000000",
     "theme": "dark"
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Huachao/vscode-restclient/issues",
-    "email": "huachaomao@gmail.com"
+    "url": "https://github.com/egoughnour/vscode-restiveclient/issues",
+    "email": "e.goughnour@gmail.com"
   },
-  "homepage": "https://github.com/Huachao/vscode-restclient/blob/master/README.md",
+  "homepage": "https://github.com/egoughnour/vscode-restiveclient/blob/master/README.md",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Huachao/vscode-restclient.git"
+    "url": "https://github.com/egoughnour/vscode-restiveclient.git"
   },
   "engines": {
     "vscode": "^1.81.0"
@@ -74,207 +74,207 @@
     ],
     "commands": [
       {
-        "command": "rest-client.request",
+        "command": "restive-client.request",
         "title": "Send Request",
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.rerun-last-request",
+        "command": "restive-client.rerun-last-request",
         "title": "Rerun Last Request",
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.cancel-request",
+        "command": "restive-client.cancel-request",
         "title": "Cancel Request",
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.switch-environment",
+        "command": "restive-client.switch-environment",
         "title": "Switch Environment",
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.history",
+        "command": "restive-client.history",
         "title": "View Request History",
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.clear-history",
+        "command": "restive-client.clear-history",
         "title": "Clear Request History",
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.save-response",
+        "command": "restive-client.save-response",
         "title": "Save Full Response",
         "icon": {
           "light": "./images/save.svg",
           "dark": "./images/save-inverse.svg"
         },
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.save-response-body",
+        "command": "restive-client.save-response-body",
         "title": "Save Response Body",
         "icon": {
           "light": "./images/save-body.svg",
           "dark": "./images/save-body-inverse.svg"
         },
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.copy-response-body",
+        "command": "restive-client.copy-response-body",
         "title": "Copy Response Body",
         "icon": {
           "light": "./images/copy.svg",
           "dark": "./images/copy-inverse.svg"
         },
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.generate-codesnippet",
+        "command": "restive-client.generate-codesnippet",
         "title": "Generate Code Snippet",
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.copy-codesnippet",
+        "command": "restive-client.copy-codesnippet",
         "title": "Copy Code Snippet",
         "icon": {
           "light": "./images/copy.svg",
           "dark": "./images/copy-inverse.svg"
         },
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.copy-request-as-curl",
+        "command": "restive-client.copy-request-as-curl",
         "title": "Copy Request As cURL",
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.clear-aad-token-cache",
+        "command": "restive-client.clear-aad-token-cache",
         "title": "Clear Azure AD Token Cache",
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.clear-cookies",
+        "command": "restive-client.clear-cookies",
         "title": "Clear cookies",
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.fold-response",
+        "command": "restive-client.fold-response",
         "title": "Fold Response",
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.unfold-response",
+        "command": "restive-client.unfold-response",
         "title": "Unfold Response",
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.preview-html-response-body",
+        "command": "restive-client.preview-html-response-body",
         "title": "HTML Preview",
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.show-raw-response",
+        "command": "restive-client.show-raw-response",
         "title": "Raw",
-        "category": "Rest Client"
+        "category": "Restive Client"
       },
       {
-        "command": "rest-client.import-swagger",
+        "command": "restive-client.import-swagger",
         "title": "Import from file",
-        "category": "Rest Client"
+        "category": "Restive Client"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "rest-client.fold-response",
+          "command": "restive-client.fold-response",
           "when": "httpResponsePreviewFocus"
         },
         {
-          "command": "rest-client.unfold-response",
+          "command": "restive-client.unfold-response",
           "when": "httpResponsePreviewFocus"
         },
         {
-          "command": "rest-client.preview-html-response-body",
+          "command": "restive-client.preview-html-response-body",
           "when": "isHTMLResponse"
         },
         {
-          "command": "rest-client.show-raw-response",
+          "command": "restive-client.show-raw-response",
           "when": "isHTMLResponse"
         },
         {
-          "command": "rest-client.save-response",
+          "command": "restive-client.save-response",
           "when": "httpResponsePreviewFocus"
         },
         {
-          "command": "rest-client.save-response-body",
+          "command": "restive-client.save-response-body",
           "when": "httpResponsePreviewFocus"
         },
         {
-          "command": "rest-client.copy-response-body",
+          "command": "restive-client.copy-response-body",
           "when": "httpResponsePreviewFocus"
         },
         {
-          "command": "rest-client.copy-codesnippet",
+          "command": "restive-client.copy-codesnippet",
           "when": "codeSnippetPreviewFocus"
         }
       ],
       "editor/title": [
         {
           "when": "httpResponsePreviewFocus",
-          "command": "rest-client.save-response",
+          "command": "restive-client.save-response",
           "group": "navigation@1"
         },
         {
           "when": "httpResponsePreviewFocus",
-          "command": "rest-client.save-response-body",
+          "command": "restive-client.save-response-body",
           "group": "navigation@2"
         },
         {
           "when": "httpResponsePreviewFocus",
-          "command": "rest-client.copy-response-body",
+          "command": "restive-client.copy-response-body",
           "group": "navigation@3"
         },
         {
           "when": "httpResponsePreviewFocus",
-          "command": "rest-client.fold-response",
+          "command": "restive-client.fold-response",
           "group": "1_rest-client@1"
         },
         {
           "when": "httpResponsePreviewFocus",
-          "command": "rest-client.unfold-response",
+          "command": "restive-client.unfold-response",
           "group": "1_rest-client@2"
         },
         {
           "when": "isHTMLResponse",
-          "command": "rest-client.preview-html-response-body",
+          "command": "restive-client.preview-html-response-body",
           "group": "1_rest-client@3"
         },
         {
           "when": "isHTMLResponse",
-          "command": "rest-client.show-raw-response",
+          "command": "restive-client.show-raw-response",
           "group": "1_rest-client@4"
         },
         {
           "when": "codeSnippetPreviewFocus",
-          "command": "rest-client.copy-codesnippet",
+          "command": "restive-client.copy-codesnippet",
           "group": "navigation"
         }
       ],
       "editor/context": [
         {
-          "command": "rest-client.request",
+          "command": "restive-client.request",
           "when": "editorTextFocus && editorLangId == http",
           "group": "rest-client@1"
         },
         {
-          "command": "rest-client.generate-codesnippet",
+          "command": "restive-client.generate-codesnippet",
           "when": "editorTextFocus && editorLangId == http",
           "group": "rest-client@2"
         },
         {
-          "command": "rest-client.copy-request-as-curl",
+          "command": "restive-client.copy-request-as-curl",
           "when": "editorTextFocus && editorLangId == http",
           "group": "rest-client@3"
         }
@@ -282,65 +282,65 @@
     },
     "keybindings": [
       {
-        "command": "rest-client.request",
+        "command": "restive-client.request",
         "key": "ctrl+alt+r",
         "mac": "cmd+alt+r",
         "when": "editorTextFocus && editorLangId == 'http'"
       },
       {
-        "command": "rest-client.request",
+        "command": "restive-client.request",
         "key": "ctrl+alt+r",
         "mac": "cmd+alt+r",
         "when": "editorTextFocus && editorLangId == 'plaintext'"
       },
       {
-        "command": "rest-client.rerun-last-request",
+        "command": "restive-client.rerun-last-request",
         "key": "ctrl+alt+l",
         "mac": "cmd+alt+l",
         "when": "editorTextFocus && editorLangId == 'http'"
       },
       {
-        "command": "rest-client.rerun-last-request",
+        "command": "restive-client.rerun-last-request",
         "key": "ctrl+alt+l",
         "mac": "cmd+alt+l",
         "when": "editorTextFocus && editorLangId == 'plaintext'"
       },
       {
-        "command": "rest-client.rerun-last-request",
+        "command": "restive-client.rerun-last-request",
         "key": "ctrl+alt+l",
         "mac": "cmd+alt+l",
         "when": "httpResponsePreviewFocus"
       },
       {
-        "command": "rest-client.cancel-request",
+        "command": "restive-client.cancel-request",
         "key": "ctrl+alt+k",
         "mac": "cmd+alt+k",
         "when": "editorTextFocus && editorLangId == 'http'"
       },
       {
-        "command": "rest-client.cancel-request",
+        "command": "restive-client.cancel-request",
         "key": "ctrl+alt+k",
         "mac": "cmd+alt+k",
         "when": "editorTextFocus && editorLangId == 'plaintext'"
       },
       {
-        "command": "rest-client.history",
+        "command": "restive-client.history",
         "key": "ctrl+alt+h",
         "mac": "cmd+alt+h"
       },
       {
-        "command": "rest-client.switch-environment",
+        "command": "restive-client.switch-environment",
         "key": "ctrl+alt+e",
         "mac": "cmd+alt+e"
       },
       {
-        "command": "rest-client.generate-codesnippet",
+        "command": "restive-client.generate-codesnippet",
         "key": "ctrl+alt+c",
         "mac": "cmd+alt+c",
         "when": "editorTextFocus && editorLangId == 'http'"
       },
       {
-        "command": "rest-client.generate-codesnippet",
+        "command": "restive-client.generate-codesnippet",
         "key": "ctrl+alt+c",
         "mac": "cmd+alt+c",
         "when": "editorTextFocus && editorLangId == 'plaintext'"
@@ -348,70 +348,70 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "REST Client",
+      "title": "Restive Client",
       "properties": {
-        "rest-client.followredirect": {
+        "restive-client.followredirect": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "description": "Follow HTTP 3xx responses as redirects."
         },
-        "rest-client.defaultHeaders": {
+        "restive-client.defaultHeaders": {
           "type": "object",
           "default": {
-            "User-Agent": "vscode-restclient"
+            "User-Agent": "vscode-restiveclient"
           },
           "scope": "resource",
           "description": "If particular headers are omitted in request headers, these will be added as headers for each request."
         },
-        "rest-client.timeoutinmilliseconds": {
+        "restive-client.timeoutinmilliseconds": {
           "type": "integer",
           "default": 0,
           "scope": "resource",
           "description": "Timeout in milliseconds. 0 for infinity"
         },
-        "rest-client.showResponseInDifferentTab": {
+        "restive-client.showResponseInDifferentTab": {
           "type": "boolean",
           "default": false,
           "scope": "resource",
           "description": "Show response in different tab"
         },
-        "rest-client.requestNameAsResponseTabTitle": {
+        "restive-client.requestNameAsResponseTabTitle": {
           "type": "boolean",
           "default": false,
           "scope": "resource",
           "description": "Show request name as the response tab title"
         },
-        "rest-client.rememberCookiesForSubsequentRequests": {
+        "restive-client.rememberCookiesForSubsequentRequests": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "description": "Remember cookies for subsequent requests"
         },
-        "rest-client.enableTelemetry": {
+        "restive-client.enableTelemetry": {
           "type": "boolean",
           "default": false,
           "scope": "resource",
           "description": "Send out anonymous usage data"
         },
-        "rest-client.excludeHostsForProxy": {
+        "restive-client.excludeHostsForProxy": {
           "type": "array",
           "default": [],
           "scope": "resource",
           "description": "Excluded hosts when using using proxy settings"
         },
-        "rest-client.fontSize": {
+        "restive-client.fontSize": {
           "type": "number",
           "scope": "resource",
           "markdownDescription": "Controls the font size in pixels used in the response preview. When set to `0`, the value of `#editor.fontSize#` is used."
         },
-        "rest-client.fontFamily": {
+        "restive-client.fontFamily": {
           "type": "string",
           "default": null,
           "scope": "resource",
           "description": "Controls the font family used in the response preview"
         },
-        "rest-client.fontWeight": {
+        "restive-client.fontWeight": {
           "type": "string",
           "enum": [
             "normal",
@@ -431,7 +431,7 @@
           "scope": "resource",
           "description": "Controls the font weight used in the response preview"
         },
-        "rest-client.environmentVariables": {
+        "restive-client.environmentVariables": {
           "type": "object",
           "default": {
             "$shared": {}
@@ -456,7 +456,7 @@
             ]
           }
         },
-        "rest-client.mimeAndFileExtensionMapping": {
+        "restive-client.mimeAndFileExtensionMapping": {
           "type": "object",
           "default": {},
           "scope": "resource",
@@ -469,19 +469,19 @@
           },
           "markdownDescription": "Sets the custom mapping of mime type and file extension of saved response body (e.g., `{\"application/atom+xml\": \"xml\"}`)"
         },
-        "rest-client.previewResponseInUntitledDocument": {
+        "restive-client.previewResponseInUntitledDocument": {
           "type": "boolean",
           "default": false,
           "scope": "resource",
           "description": "Preview response in untitled document if set to true, otherwise displayed in html view"
         },
-        "rest-client.oidcScopes": {
+        "restive-client.oidcScopes": {
           "type": "array",
           "default": [],
           "scope": "resource",
           "description": "Scopes to be used by the OIDC client, default: [openid profile email]"
         },
-        "rest-client.oidcCertificates": {
+        "restive-client.oidcCertificates": {
           "type": "object",
           "default": {},
           "scope": "resource",
@@ -523,7 +523,7 @@
             ]
           }
         },
-        "rest-client.certificates": {
+        "restive-client.certificates": {
           "type": "object",
           "default": {},
           "scope": "resource",
@@ -565,13 +565,13 @@
             ]
           }
         },
-        "rest-client.suppressResponseBodyContentTypeValidationWarning": {
+        "restive-client.suppressResponseBodyContentTypeValidationWarning": {
           "type": "boolean",
           "default": false,
           "scope": "resource",
           "description": "Suppress response body content type validation"
         },
-        "rest-client.previewOption": {
+        "restive-client.previewOption": {
           "type": "string",
           "enum": [
             "full",
@@ -589,19 +589,19 @@
           "scope": "resource",
           "description": "Response preview output option"
         },
-        "rest-client.disableHighlightResponseBodyForLargeResponse": {
+        "restive-client.disableHighlightResponseBodyForLargeResponse": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "Controls whether to highlight response body for response whose size is larger than limit specified by `rest-client.largeResponseSizeLimitInMB`"
         },
-        "rest-client.disableAddingHrefLinkForLargeResponse": {
+        "restive-client.disableAddingHrefLinkForLargeResponse": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "Controls whether to add href link in previewed response for response whose size is larger than limit specified by `rest-client.largeResponseSizeLimitInMB`"
         },
-        "rest-client.largeResponseBodySizeLimitInMB": {
+        "restive-client.largeResponseBodySizeLimitInMB": {
           "type": "number",
           "default": 5,
           "minimum": 0,
@@ -609,7 +609,7 @@
           "scope": "resource",
           "markdownDescription": "Set the response body size threshold of MB to identify whether a response is a so-called 'large response', only used when `rest-client.disableHighlightResponseBodyForLargeResponse` and/or `rest-client.disableAddingHrefLinkForLargeResponse` is set to true"
         },
-        "rest-client.previewColumn": {
+        "restive-client.previewColumn": {
           "type": "string",
           "enum": [
             "current",
@@ -623,13 +623,13 @@
           "scope": "resource",
           "description": "Response preview column option"
         },
-        "rest-client.previewResponsePanelTakeFocus": {
+        "restive-client.previewResponsePanelTakeFocus": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "description": "Preview response panel will take focus after receiving response."
         },
-        "rest-client.formParamEncodingStrategy": {
+        "restive-client.formParamEncodingStrategy": {
           "type": "string",
           "enum": [
             "automatic",
@@ -645,19 +645,19 @@
           "scope": "resource",
           "markdownDescription": "Form param encoding strategy for request body of `x-www-form-urlencoded`."
         },
-        "rest-client.addRequestBodyLineIndentationAroundBrackets": {
+        "restive-client.addRequestBodyLineIndentationAroundBrackets": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "Add line indentation around brackets(`{}`, `<>`, `[]`) in request body when pressing enter."
         },
-        "rest-client.decodeEscapedUnicodeCharacters": {
+        "restive-client.decodeEscapedUnicodeCharacters": {
           "type": "boolean",
           "default": false,
           "scope": "resource",
           "description": "Decode escaped unicode characters in response body."
         },
-        "rest-client.logLevel": {
+        "restive-client.logLevel": {
           "type": "string",
           "enum": [
             "error",
@@ -669,19 +669,19 @@
           "scope": "resource",
           "description": "The verbosity of logging in the REST output panel"
         },
-        "rest-client.enableSendRequestCodeLens": {
+        "restive-client.enableSendRequestCodeLens": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "description": "Enable/disable sending request CodeLens in request file"
         },
-        "rest-client.enableCustomVariableReferencesCodeLens": {
+        "restive-client.enableCustomVariableReferencesCodeLens": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "description": "Enable/disable custom variable references CodeLens in request file"
         },
-        "rest-client.useContentDispositionFilename": {
+        "restive-client.useContentDispositionFilename": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
