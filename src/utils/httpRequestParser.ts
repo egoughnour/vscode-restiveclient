@@ -1,11 +1,7 @@
 import * as fs from 'fs-extra';
 import { EOL } from 'os';
 import { Stream } from 'stream';
-import { workspace } from 'vscode';
-import { 
-    applyJsonPathPokes,
-    parseJsonPatchHeaderValue
- } from './jsonPathBodyPatcher';
+import { TemplateOrder, OngoingRequest, processBodyWithPatching } from './bodyPatchPipeline';
 import { IRestClientSettings } from '../models/configurationSettings';
 import { FormParamEncodingStrategy } from '../models/formParamEncodingStrategy';
 import { HttpRequest } from '../models/httpRequest';
@@ -26,95 +22,15 @@ enum ParseState {
     Body,
 }
 
-interface OutgoingRequest {
-    url: string;
-    method: string;
-    headers: RequestHeaders;
+interface BodyParseResult {
     body?: string | Stream;
-    // other properties here as needed
-}
-
-async function maybePatchJsonBody(
-    request: OutgoingRequest,
-    resolveVariables: (text: string) => Promise<string>
-): Promise<void> {
-    const config = workspace.getConfiguration();
-    const enableJsonBodyPatching = config.get<boolean>('restive-client.enableJsonBodyPatching', true);
-    if (!enableJsonBodyPatching) {
-        return;
-    }
-
-    const jsonPatchHeaderName = config.get<string>('restive-client.jsonPatchHeaderName', 'X-RestiveClient-JsonPatch');
-    const headerNameLower = jsonPatchHeaderName.toLowerCase();
-
-    const patchHeaderValues: string[] = [];
-    for (const [name, value] of Object.entries(request.headers)) {
-        if (name.toLowerCase() !== headerNameLower) {
-            continue;
-        }
-        if (typeof value === 'string') {
-            patchHeaderValues.push(value);
-        } else if (Array.isArray(value)) {
-            patchHeaderValues.push(...value);
-        } else if (typeof value === 'number') {
-            patchHeaderValues.push(String(value));
-        }
-    }
-    if (patchHeaderValues.length === 0) {
-        return;
-    }
-
-    const contentTypeHeader = getContentType(request.headers);
-    if (!MimeUtility.isJSON(contentTypeHeader)) {
-        stripPatchHeaders(request.headers, headerNameLower);
-        return;
-    }
-
-    let bodyText: string | undefined;
-    if (typeof request.body === 'string') {
-        bodyText = request.body;
-    } else if (Buffer.isBuffer(request.body)) {
-        bodyText = request.body.toString();
-    } else if (request.body instanceof Stream) {
-        bodyText = await convertStreamToString(request.body);
-    }
-
-    if (bodyText === undefined) {
-        stripPatchHeaders(request.headers, headerNameLower);
-        return;
-    }
-
-    const rules = parseJsonPatchHeaderValue(patchHeaderValues);
-    if (rules.length === 0) {
-        stripPatchHeaders(request.headers, headerNameLower);
-        return;
-    }
-
-    const patchedBody = await applyJsonPathPokes(
-        bodyText,
-        rules,
-        resolveVariables
-    );
-    request.body = patchedBody;
-    stripPatchHeaders(request.headers, headerNameLower);
-}
-
-function stripPatchHeaders(
-    headers: RequestHeaders,
-    headerNameLower: string
-): void {
-    for (const name of Object.keys(headers)) {
-        if (name.toLowerCase() === headerNameLower) {
-            //eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-            delete headers[name];
-        }
-    }
+    templateOrder: TemplateOrder;
 }
 
 export class HttpRequestParser implements RequestParser {
     private readonly defaultMethod = 'GET';
     private readonly queryStringLinePrefix = /^\s*[&\?]/;
-    private readonly inputFileSyntax = /^<(?:(?<processVariables>@)(?<encoding>\w+)?)?\s+(?<filepath>.+?)\s*$/;
+    private readonly inputFileSyntax = /^<(?=[\s@jx\.])(?:(?<indicator>[^\s]+)\s+)?(?<filepath>.+?)\s*$/;
     private readonly defaultFileEncoding = 'utf8';
 
     public constructor(private readonly requestRawText: string, private readonly settings: IRestClientSettings) {
@@ -187,9 +103,13 @@ export class HttpRequestParser implements RequestParser {
 
         // parse body lines
         const contentTypeHeader = getContentType(headers);
-        let body = await this.parseBody(bodyLines, contentTypeHeader);
+        const bodyResult = await this.parseBody(bodyLines, contentTypeHeader);
+        let templateOrder = bodyResult.templateOrder;
+        let body = bodyResult.body;
         if (isGraphQlRequest) {
-            body = await this.createGraphQlBody(variableLines, contentTypeHeader, body);
+            const graphQlResult = await this.createGraphQlBody(variableLines, contentTypeHeader, bodyResult);
+            body = graphQlResult.body;
+            templateOrder = graphQlResult.templateOrder;
         } else if (this.settings.formParamEncodingStrategy !== FormParamEncodingStrategy.Never && typeof body === 'string' && MimeUtility.isFormUrlEncoded(contentTypeHeader)) {
             if (this.settings.formParamEncodingStrategy === FormParamEncodingStrategy.Always) {
                 const stringPairs = body.split('&');
@@ -212,42 +132,45 @@ export class HttpRequestParser implements RequestParser {
             const scheme = port === '443' || port === '8443' ? 'https' : 'http';
             requestLine.url = `${scheme}://${host}${requestLine.url}`;
         }
-        const outgoingRequest: OutgoingRequest = {
+        const outgoingRequest: OngoingRequest = {
             url: requestLine.url,
             method: requestLine.method,
             headers,
             body,
         };
-        if (outgoingRequest.body) {
-            await maybePatchJsonBody(
-                outgoingRequest,
-                async (text: string) => VariableProcessor.processRawRequest(text)
-            );
-            body = outgoingRequest.body;
-        }
+        await processBodyWithPatching(
+            outgoingRequest,
+            templateOrder,
+            async (text: string) => VariableProcessor.processRawRequest(text)
+        );
+        body = outgoingRequest.body;
 
         return new HttpRequest(requestLine.method, requestLine.url, headers, body, bodyLines.join(EOL), name);
     }
 
-    private async createGraphQlBody(variableLines: string[], contentTypeHeader: string | undefined, body: string | Stream | undefined) {
-        let variables = await this.parseBody(variableLines, contentTypeHeader);
-        if (variables && typeof variables !== 'string') {
-            variables = await convertStreamToString(variables);
-        }
+    private async createGraphQlBody(
+        variableLines: string[],
+        contentTypeHeader: string | undefined,
+        bodyResult: BodyParseResult
+    ): Promise<{ body: string; templateOrder: TemplateOrder }> {
+        const variablesResult = await this.parseBody(variableLines, contentTypeHeader);
+        const templateOrder = this.combineTemplateOrders(bodyResult.templateOrder, variablesResult.templateOrder);
 
-        if (body && typeof body !== 'string') {
-            body = await convertStreamToString(body);
-        }
+        const variablesText = await this.materializeBody(variablesResult.body);
+        const bodyText = await this.materializeBody(bodyResult.body);
 
-        const matched = body?.match(/^\s*query\s+([^@\{\(\s]+)/i);
+        const matched = bodyText?.match(/^\s*query\s+([^@\{\(\s]+)/i);
         const operationName = matched?.[1];
 
         const graphQlPayload = {
-            query: body,
+            query: bodyText,
             operationName,
-            variables: variables ? JSON.parse(variables) : {}
+            variables: variablesText ? JSON.parse(variablesText) : {}
         };
-        return JSON.stringify(graphQlPayload);
+        return {
+            body: JSON.stringify(graphQlPayload),
+            templateOrder
+        };
     }
 
     private parseRequestLine(line: string): { method: string, url: string } {
@@ -274,62 +197,175 @@ export class HttpRequestParser implements RequestParser {
         return { method, url };
     }
 
-    private async parseBody(lines: string[], contentTypeHeader: string | undefined): Promise<string | Stream | undefined> {
+    private async parseBody(lines: string[], contentTypeHeader: string | undefined): Promise<BodyParseResult> {
         if (lines.length === 0) {
-            return undefined;
+            return { body: undefined, templateOrder: TemplateOrder.None };
         }
 
         // Check if needed to upload file
         if (lines.every(line => !this.inputFileSyntax.test(line))) {
             if (MimeUtility.isFormUrlEncoded(contentTypeHeader)) {
-                return lines.reduce((p, c, i) => {
+                const body = lines.reduce((p, c, i) => {
                     p += `${(i === 0 || c.startsWith('&') ? '' : EOL)}${c}`;
                     return p;
                 }, '');
+                return { body, templateOrder: TemplateOrder.None };
             } else {
                 const lineEnding = this.getLineEnding(contentTypeHeader);
-                let result = lines.join(lineEnding);
+                let body = lines.join(lineEnding);
                 if (MimeUtility.isNewlineDelimitedJSON(contentTypeHeader)) {
-                    result += lineEnding;
+                    body += lineEnding;
                 }
-                return result;
+                return { body, templateOrder: TemplateOrder.None };
             }
         } else {
             const combinedStream = CombinedStream.create({ maxDataSize: 10 * 1024 * 1024 });
+            const parts: Array<string | Stream> = [];
+            let templateOrder: TemplateOrder = TemplateOrder.None;
+            let templateRequested = false;
+            let forbidTemplate = false;
+            let materialize = false;
+
             for (const [index, line] of lines.entries()) {
                 if (this.inputFileSyntax.test(line)) {
                     const groups = this.inputFileSyntax.exec(line);
                     const groupsValues = groups?.groups;
-                    if (groups?.length === 4 && !!groupsValues) {
-                        const inputFilePath = groupsValues.filepath;
+                    if (groups?.groups && groupsValues) {
+                        const inputFilePath = groupsValues.filepath.trim();
+                        const indicator = groupsValues.indicator;
+                        const parsedIndicator = this.parseIndicator(indicator);
+                        if (parsedIndicator.forbidTemplate) {
+                            if (templateRequested) {
+                                throw new Error('REST Client body parsing: conflicting template instructions for "<." and "@" markers.');
+                            }
+                            forbidTemplate = true;
+                        }
+                        if (parsedIndicator.templateOrder !== TemplateOrder.None) {
+                            if (templateRequested && templateOrder !== parsedIndicator.templateOrder) {
+                                throw new Error('REST Client body parsing: conflicting template substitution order markers.');
+                            }
+                            if (forbidTemplate) {
+                                throw new Error('REST Client body parsing: template processing disabled for this body but "@" marker found.');
+                            }
+                            templateRequested = true;
+                            templateOrder = parsedIndicator.templateOrder;
+                        }
+                        if (parsedIndicator.encoding) {
+                            materialize = true;
+                        }
                         const fileAbsolutePath = await resolveRequestBodyPath(inputFilePath);
                         if (fileAbsolutePath) {
-                            if (groupsValues.processVariables) {
+                            if (parsedIndicator.encoding) {
                                 const buffer = await fs.readFile(fileAbsolutePath);
-                                const fileContent = buffer.toString((groupsValues.encoding || this.defaultFileEncoding) as BufferEncoding);
-                                const resolvedContent = await VariableProcessor.processRawRequest(fileContent);
-                                combinedStream.append(resolvedContent);
+                                parts.push(buffer.toString(parsedIndicator.encoding as BufferEncoding));
                             } else {
-                                combinedStream.append(fs.createReadStream(fileAbsolutePath));
+                                parts.push(fs.createReadStream(fileAbsolutePath));
                             }
                         } else {
-                            combinedStream.append(line);
+                            parts.push(line);
                         }
                     }
                 } else {
-                    combinedStream.append(line);
+                    parts.push(line);
                 }
 
                 if ((index !== lines.length - 1) || MimeUtility.isMultiPartFormData(contentTypeHeader)) {
-                    combinedStream.append(this.getLineEnding(contentTypeHeader));
+                    const ending = this.getLineEnding(contentTypeHeader);
+                    parts.push(ending);
                 }
             }
 
-            return combinedStream;
+            const finalTemplateOrder = templateRequested ? templateOrder : TemplateOrder.None;
+            if (materialize || templateRequested) {
+                const textBody = await this.materializeParts(parts);
+                return { body: textBody, templateOrder: finalTemplateOrder };
+            }
+            for (const part of parts) {
+                combinedStream.append(part);
+            }
+            return { body: combinedStream, templateOrder: finalTemplateOrder };
         }
     }
 
     private getLineEnding(contentTypeHeader: string | undefined) {
         return MimeUtility.isMultiPartFormData(contentTypeHeader) ? '\r\n' : EOL;
+    }
+
+    private parseIndicator(indicator: string | undefined): { templateOrder: TemplateOrder; encoding?: string; forbidTemplate: boolean } {
+        if (!indicator) {
+            return { templateOrder: TemplateOrder.None, forbidTemplate: false };
+        }
+        if (indicator === '.') {
+            return { templateOrder: TemplateOrder.None, forbidTemplate: true };
+        }
+        const atIndex = indicator.indexOf('@');
+        if (atIndex === -1) {
+            return { templateOrder: TemplateOrder.None, forbidTemplate: false };
+        }
+        const before = indicator.slice(0, atIndex);
+        const after = indicator.slice(atIndex + 1);
+
+        if (before === 'j' || before === 'x') {
+            return {
+                templateOrder: TemplateOrder.AfterPatch,
+                encoding: after || this.defaultFileEncoding,
+                forbidTemplate: false
+            };
+        }
+
+        let encoding: string | undefined = after || this.defaultFileEncoding;
+        let templateOrder = TemplateOrder.BeforePatch;
+        if (after.startsWith('j') || after.startsWith('x')) {
+            templateOrder = TemplateOrder.BeforePatch;
+            encoding = after.slice(1) || this.defaultFileEncoding;
+        }
+        if (indicator === '@') {
+            encoding = this.defaultFileEncoding;
+        }
+        return {
+            templateOrder,
+            encoding,
+            forbidTemplate: false
+        };
+    }
+
+    private async materializeParts(parts: Array<string | Stream>): Promise<string> {
+        const chunks: string[] = [];
+        for (const part of parts) {
+            if (typeof part === 'string') {
+                chunks.push(part);
+            } else if (Buffer.isBuffer(part)) {
+                chunks.push(part.toString());
+            } else {
+                chunks.push(await convertStreamToString(part));
+            }
+        }
+        return chunks.join('');
+    }
+
+    private async materializeBody(body: string | Stream | undefined): Promise<string | undefined> {
+        if (body === undefined) {
+            return undefined;
+        }
+        if (typeof body === 'string') {
+            return body;
+        }
+        if (Buffer.isBuffer(body)) {
+            return body.toString();
+        }
+        return convertStreamToString(body);
+    }
+
+    private combineTemplateOrders(first: TemplateOrder, second: TemplateOrder): TemplateOrder {
+        if (first === TemplateOrder.None) {
+            return second;
+        }
+        if (second === TemplateOrder.None) {
+            return first;
+        }
+        if (first !== second) {
+            throw new Error('REST Client body parsing: conflicting template substitution order markers in GraphQL body and variables.');
+        }
+        return first;
     }
 }

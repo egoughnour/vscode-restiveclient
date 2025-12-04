@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "mutate": [
+    "src/utils/bodyPatchPipeline.ts",
+    "src/utils/jsonPathBodyPatcher.ts",
+    "src/utils/xmlBodyPatcher.ts"
+  ],
+  "testRunner": "mocha",
+  "concurrency": 1,
+  "mochaOptions": {
+    "spec": [
+      "tests/**/*.test.ts"
+    ],
+    "require": [
+      "tests/ts-hook.js"
+    ]
+  },
+  "checkers": [],
+  "reporters": [
+    "progress",
+    "clear-text"
+  ],
+  "coverageAnalysis": "off"
+}
