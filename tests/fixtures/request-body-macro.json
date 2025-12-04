@@ -1,0 +1,6 @@
+{
+  "user": {
+    "name": "{{name}}",
+    "token": "{{token}}"
+  }
+}

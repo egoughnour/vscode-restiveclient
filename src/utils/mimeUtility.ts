@@ -65,7 +65,12 @@ export class MimeUtility {
         }
 
         const { subtype, essence } = this.parse(contentTypeString);
-        return essence === 'application/json' || essence === 'text/json' || subtype.endsWith('+json') || subtype.startsWith('x-amz-json');
+        return essence === 'application/json'
+            || essence === 'text/json'
+            || essence === 'application/json-patch-json'
+            || essence === 'application/json-patch+json'
+            || subtype.endsWith('+json')
+            || subtype.startsWith('x-amz-json');
     }
 
     public static isXml(contentTypeString: string | undefined): boolean {

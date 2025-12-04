@@ -357,8 +357,23 @@
         },
         "restive-client.jsonPatchHeaderName": {
           "type": "string",
-          "default": "X-RestClient-JsonPatch",
+          "default": "X-RestiveClient-JsonPatch",
           "description": "Header name that carries JSONPath patch instructions. The header is stripped before the request is sent."
+        },
+        "restive-client.enableXmlBodyPatching": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable XPath-based patching of XML request bodies using a special HTTP header."
+        },
+        "restive-client.xmlPatchHeaderName": {
+          "type": "string",
+          "default": "X-RestiveClient-XmlPatch",
+          "description": "Header name that carries XPath patch instructions. The header is stripped before the request is sent."
+        },
+        "restive-client.bodyPatchDebug": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, Restive Client emits debug patch stage information to the X-RestiveClient-Patch-Debug header."
         },
         "restive-client.followredirect": {
           "type": "boolean",
@@ -714,9 +729,13 @@
     "webpack": "webpack --mode development",
     "watch": "webpack --mode development --watch",
     "tslint": "tslint --project tsconfig.json",
-    "test": "mocha -r tests/ts-hook.js \"tests/**/*.test.ts\""
+    "test": "mocha -r tests/ts-hook.js \"tests/**/*.test.ts\"",
+    "mutate": "stryker run"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^9.4.0",
+    "@stryker-mutator/mocha-runner": "^9.4.0",
+    "@stryker-mutator/typescript-checker": "^9.4.0",
     "@types/aws4": "^1.5.1",
     "@types/fs-extra": "^5.0.4",
     "@types/jws": "^3.2.10",
