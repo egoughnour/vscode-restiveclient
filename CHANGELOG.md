@@ -1,3 +1,10 @@
+## 0.28.0 (2024/12/23)
+* __Feature__: Add JSONPath-based body patching for JSON request bodies via `X-RestiveClient-JsonPatch` header
+* __Feature__: Add XPath-based body patching for XML request bodies via `X-RestiveClient-XmlPatch` header
+* __Feature__: Support controlling the relative ordering of template substitution and body patching with file indicators (`@j`, `j@`, `@x`, `x@`, `.`)
+* __Improvement__: Fix parsing of JSONPath filter expressions containing `=` and `==` operators
+* __Improvement__: Comprehensive test coverage for body patching functionality
+
 ## 0.25.1 (2022/07/06)
 * __Bug Fix__: [Fix request parse error for curl request without body](https://github.com/Huachao/vscode-restclient/issues/1026)
 
