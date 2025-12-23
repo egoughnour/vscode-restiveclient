@@ -20,7 +20,7 @@
         "node_modules",
         ".vscode-test",
         "tests",
-        ".stryker-temp",
+        ".stryker-tmp",
         "stryker.conf.json"
     ]
 }
