@@ -5,7 +5,6 @@ import { TemplateOrder, OngoingRequest, processBodyWithPatching } from './bodyPa
 import { IRestClientSettings } from '../models/configurationSettings';
 import { FormParamEncodingStrategy } from '../models/formParamEncodingStrategy';
 import { HttpRequest } from '../models/httpRequest';
-import { RequestHeaders } from '../models/base';
 import { RequestParser } from '../models/requestParser';
 import { MimeUtility } from './mimeUtility';
 import { getContentType, getHeader, removeHeader } from './misc';

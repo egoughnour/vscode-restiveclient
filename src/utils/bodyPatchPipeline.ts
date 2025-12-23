@@ -117,7 +117,7 @@ async function applyJsonPatchIfNeeded(
     } else if (Buffer.isBuffer(request.body)) {
         bodyText = request.body.toString();
     } else if ((request.body as any)?.pipe) {
-        bodyText = await convertStreamToString(request.body);
+        bodyText = await convertStreamToString(request.body as Stream);
     }
 
     if (bodyText === undefined) {
@@ -172,7 +172,7 @@ async function applyXmlPatchIfNeeded(
     } else if (Buffer.isBuffer(request.body)) {
         bodyText = request.body.toString();
     } else if ((request.body as any)?.pipe) {
-        bodyText = await convertStreamToString(request.body);
+        bodyText = await convertStreamToString(request.body as Stream);
     }
 
     if (bodyText === undefined) {
