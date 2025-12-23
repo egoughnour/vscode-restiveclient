@@ -68,6 +68,11 @@ export function parseJsonPatchHeaderValue(headerValues: string[]): JsonPatchRule
 
 function findUnescapedEquals(s: string): number {
     let escaping = false;
+    let inSingleQuote = false;
+    let inDoubleQuote = false;
+    let bracketDepth = 0;
+    let parenDepth = 0;
+
     for (let i = 0; i < s.length; i++) {
         const ch = s[i];
         if (escaping) {
@@ -78,7 +83,36 @@ function findUnescapedEquals(s: string): number {
             escaping = true;
             continue;
         }
-        if (ch === '=') {
+
+        // Track quote states
+        if (ch === "'" && !inDoubleQuote) {
+            inSingleQuote = !inSingleQuote;
+            continue;
+        }
+        if (ch === '"' && !inSingleQuote) {
+            inDoubleQuote = !inDoubleQuote;
+            continue;
+        }
+
+        // Skip characters inside quotes
+        if (inSingleQuote || inDoubleQuote) {
+            continue;
+        }
+
+        // Track bracket/paren depth for JSONPath filter expressions
+        if (ch === '[' || ch === '(') {
+            if (ch === '[') bracketDepth++;
+            if (ch === '(') parenDepth++;
+            continue;
+        }
+        if (ch === ']' || ch === ')') {
+            if (ch === ']' && bracketDepth > 0) bracketDepth--;
+            if (ch === ')' && parenDepth > 0) parenDepth--;
+            continue;
+        }
+
+        // Only match '=' when not inside brackets/parens or quotes
+        if (ch === '=' && bracketDepth === 0 && parenDepth === 0) {
             return i;
         }
     }
