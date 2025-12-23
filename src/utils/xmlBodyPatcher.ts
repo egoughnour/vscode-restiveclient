@@ -47,7 +47,7 @@ export async function applyXPathPokes(
     return serializer.serializeToString(doc);
 }
 
-function applyValueToNode(node: xpath.SelectedValue, value: string, doc: Document): void {
+function applyValueToNode(node: xpath.SelectedValue, value: string, doc: any): void {
     const casted: any = node as any;
     if (casted.nodeType === 2) { // ATTRIBUTE_NODE
         casted.value = value;

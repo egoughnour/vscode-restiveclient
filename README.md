@@ -199,6 +199,39 @@ Authorization: token xxx
 <@latin1 ./demo.xml
 ```
 
+#### Template and Patching Order
+
+When using body patching (see [Body Patching](#body-patching) below) together with file-based request bodies that contain template variables, you can control the relative order of template substitution and patching using special file indicators:
+
+| Indicator | Description |
+|-----------|-------------|
+| `<@ file` | Template substitution runs **before** patching (default with `@`) |
+| `<@j file` | Same as `<@` - template **before** JSON patching |
+| `<@x file` | Same as `<@` - template **before** XML patching |
+| `<j@ file` | JSON patching runs **before** template substitution |
+| `<x@ file` | XML patching runs **before** template substitution |
+| `<. file` | No template substitution (patching only, variables remain as `{{var}}`) |
+
+For example, if your JSON file contains `{{token}}` and you want to patch a value and then resolve the token:
+```http
+POST https://example.com/api HTTP/1.1
+Content-Type: application/json
+X-RestiveClient-JsonPatch: $.userId=123
+
+<j@ ./request-body.json
+```
+In this case, the JSON body is patched first (setting `$.userId` to `123`), then template variables like `{{token}}` are resolved.
+
+Conversely, if you want templates resolved before patching:
+```http
+POST https://example.com/api HTTP/1.1
+Content-Type: application/json
+X-RestiveClient-JsonPatch: $.status={{dynamicStatus}}
+
+<@j ./request-body.json
+```
+Here, templates in the file are resolved first, then the patch value `{{dynamicStatus}}` is resolved and applied.
+
 When content type of request body is `multipart/form-data`, you may have the mixed format of the request body as follows:
 ```http
 POST https://api.example.com/user/upload
@@ -263,6 +296,96 @@ query ($name: String!, $owner: String!) {
     "owner": "Huachao"
 }
 ```
+
+## Body Patching
+Restive Client supports dynamically patching JSON and XML request bodies using JSONPath and XPath expressions. This is useful when you have a base request body (often from a file) and need to modify specific values without changing the original file.
+
+### JSON Body Patching
+To patch a JSON request body, add the `X-RestiveClient-JsonPatch` header with one or more patch rules. Each rule follows the format `jsonpath=value`, and multiple rules are separated by semicolons (`;`).
+
+```http
+POST https://api.example.com/users HTTP/1.1
+Content-Type: application/json
+X-RestiveClient-JsonPatch: $.user.name=John Doe;$.user.active=true
+
+{
+    "user": {
+        "name": "placeholder",
+        "email": "john@example.com",
+        "active": false
+    }
+}
+```
+
+The patch header is automatically stripped before the request is sent. The patched body would be:
+```json
+{"user":{"name":"John Doe","email":"john@example.com","active":true}}
+```
+
+#### JSONPath Patch Syntax
+- **Simple paths**: `$.user.name=value` - Updates a specific property
+- **Array indexing**: `$.items[0]=value` - Updates an array element by index
+- **Wildcards**: `$.users[*].status=active` - Updates all matching elements
+- **Filter expressions**: `$.users[?(@.age > 18)].verified=true` - Updates elements matching a condition
+
+#### Value Types
+Values are automatically interpreted:
+- Numbers: `$.count=42` or `$.price=19.99`
+- Booleans: `$.active=true` or `$.enabled=false`
+- Null: `$.data=null`
+- JSON objects: `$.config={"key": "value"}`
+- JSON arrays: `$.items=[1, 2, 3]`
+- Strings: `$.name=John` (unquoted) or `$.name="John"` (quoted)
+
+#### Using Variables in Patches
+You can use Restive Client variables in patch values:
+```http
+POST https://api.example.com/auth HTTP/1.1
+Content-Type: application/json
+X-RestiveClient-JsonPatch: $.token={{authToken}};$.timestamp={{$timestamp}}
+
+< ./request-template.json
+```
+
+#### Escaping Special Characters
+- Use `\;` to include a literal semicolon in a value
+- Use `\\` to include a literal backslash
+
+### XML Body Patching
+To patch an XML request body, add the `X-RestiveClient-XmlPatch` header with XPath-based patch rules:
+
+```http
+POST https://api.example.com/orders HTTP/1.1
+Content-Type: application/xml
+X-RestiveClient-XmlPatch: //order/status=shipped;//order/@priority=high
+
+<order priority="normal">
+    <id>12345</id>
+    <status>pending</status>
+</order>
+```
+
+The patched body would update both the `status` element text and the `priority` attribute.
+
+#### XPath Patch Syntax
+- **Element text**: `//user/name=New Name` - Updates element text content
+- **Attributes**: `//user/@status=active` - Updates an attribute value
+- **Predicates**: `//item[@id='123']/price=29.99` - Updates elements matching a predicate
+- **Positional**: `//items/item[1]=First` - Updates by position
+
+### Body Patching Configuration
+The following settings control body patching behavior:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `restive-client.enableJsonBodyPatching` | `true` | Enable/disable JSON body patching |
+| `restive-client.jsonPatchHeaderName` | `X-RestiveClient-JsonPatch` | Custom header name for JSON patches |
+| `restive-client.enableXmlBodyPatching` | `true` | Enable/disable XML body patching |
+| `restive-client.xmlPatchHeaderName` | `X-RestiveClient-XmlPatch` | Custom header name for XML patches |
+| `restive-client.bodyPatchDebug` | `false` | Add debug info to response headers |
+
+### Content-Type Exceptions
+Body patching is automatically skipped for RFC 6902 JSON Patch (`application/json-patch+json`) and XML Patch (`application/xml-patch+xml`) content types to avoid conflicts with standard patch formats.
 
 ## Making cURL Request
 ![cURL Request](https://raw.githubusercontent.com/egoughnour/vscode-restiveclient/master/images/curl-request.png)

@@ -25,7 +25,7 @@ const config = {
     module: {
         rules: [{
             test: /\.ts$/,
-            exclude: /node_modules/,
+            exclude: [/node_modules/, /tests/],
             use: [{
                 loader: 'ts-loader',
             }]
