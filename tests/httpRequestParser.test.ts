@@ -184,3 +184,122 @@ describe('HttpRequestParser XML body patching', () => {
         assert.strictEqual(request.headers['X-RestiveClient-XmlPatch'], undefined);
     });
 });
+
+// Regression tests for rawBody field (used by code snippet generation)
+describe('HttpRequestParser rawBody for code generation', () => {
+    it('rawBody contains resolved file content, not file indicator syntax', async () => {
+        // This is a regression test: rawBody should contain actual JSON content,
+        // not the file indicator like "< /path/to/file.json"
+        const requestText = [
+            'POST https://example.com',
+            'Content-Type: application/json',
+            '',
+            `< ${fixturePath}`
+        ].join(EOL);
+        const parser = new HttpRequestParser(requestText, baseSettings);
+
+        const request = await parser.parseHttpRequest();
+
+        // rawBody should NOT contain the file indicator syntax
+        assert.ok(!request.rawBody?.includes('<'), 'rawBody should not contain file indicator "<"');
+        assert.ok(!request.rawBody?.includes(fixturePath), 'rawBody should not contain file path');
+        
+        // rawBody SHOULD contain actual JSON content
+        assert.ok(request.rawBody?.includes('"user"'), 'rawBody should contain actual JSON content');
+        const parsed = JSON.parse(request.rawBody!);
+        assert.equal(parsed.user.name, 'Original');
+    });
+
+    it('rawBody contains patched content after body patching', async () => {
+        const requestText = [
+            'POST https://example.com',
+            'Content-Type: application/json',
+            'X-RestiveClient-JsonPatch: $.user.name=CodeGenName',
+            '',
+            `<@ ${fixturePath}`
+        ].join(EOL);
+        const parser = new HttpRequestParser(requestText, baseSettings);
+
+        const request = await parser.parseHttpRequest();
+
+        // rawBody should contain the patched content (same as body after patching)
+        const parsed = JSON.parse(request.rawBody!);
+        assert.equal(parsed.user.name, 'CodeGenName', 'rawBody should reflect patched values');
+    });
+
+    it('rawBody contains resolved XML content from file', async () => {
+        const requestText = [
+            'POST https://example.com',
+            'Content-Type: application/xml',
+            '',
+            `< ${xmlFixturePath}`
+        ].join(EOL);
+        const parser = new HttpRequestParser(requestText, baseSettings);
+
+        const request = await parser.parseHttpRequest();
+
+        // rawBody should NOT contain the file indicator syntax
+        assert.ok(!request.rawBody?.includes('<x@'), 'rawBody should not contain file indicator');
+        assert.ok(!request.rawBody?.includes(xmlFixturePath), 'rawBody should not contain file path');
+        
+        // rawBody SHOULD contain actual XML content
+        assert.ok(request.rawBody?.includes('<user'), 'rawBody should contain actual XML content');
+        assert.ok(request.rawBody?.includes('<name>Original</name>'), 'rawBody should contain XML element');
+    });
+
+    it('rawBody contains template-resolved content', async () => {
+        VariableProcessor.processRawRequest = async (text: string) => 
+            text.replace('{{name}}', 'ResolvedName');
+        const requestText = [
+            'POST https://example.com',
+            'Content-Type: application/json',
+            '',
+            `<@ ${macroFixturePath}`
+        ].join(EOL);
+        const parser = new HttpRequestParser(requestText, baseSettings);
+
+        const request = await parser.parseHttpRequest();
+
+        // rawBody should contain resolved template values
+        const parsed = JSON.parse(request.rawBody!);
+        assert.equal(parsed.user.name, 'ResolvedName', 'rawBody should have resolved template variables');
+    });
+
+    it('rawBody equals body when body is a string', async () => {
+        const requestText = [
+            'POST https://example.com',
+            'Content-Type: application/json',
+            'X-RestiveClient-JsonPatch: $.name=Test',
+            '',
+            `<@ ${fixturePath}`
+        ].join(EOL);
+        const parser = new HttpRequestParser(requestText, baseSettings);
+
+        const request = await parser.parseHttpRequest();
+
+        // When body is a string (after patching), rawBody should match
+        assert.equal(typeof request.body, 'string');
+        assert.equal(request.rawBody, request.body, 'rawBody should equal body when body is string');
+    });
+
+    it('rawBody is available even when body remains a stream', async () => {
+        // When using plain "< " without patching, body might be a stream for efficiency
+        // but rawBody should still be available as a string for code generation
+        vscode.workspace.__setConfigurationValue('restive-client.enableJsonBodyPatching', false);
+        const requestText = [
+            'POST https://example.com',
+            'Content-Type: application/json',
+            '',
+            `< ${fixturePath}`
+        ].join(EOL);
+        const parser = new HttpRequestParser(requestText, baseSettings);
+
+        const request = await parser.parseHttpRequest();
+
+        // rawBody should be a string with resolved content regardless of body type
+        assert.equal(typeof request.rawBody, 'string', 'rawBody should always be a string');
+        assert.ok(!request.rawBody?.startsWith('<'), 'rawBody should not start with file indicator');
+        const parsed = JSON.parse(request.rawBody!);
+        assert.equal(parsed.user.name, 'Original');
+    });
+});
