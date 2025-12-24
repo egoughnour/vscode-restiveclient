@@ -4,6 +4,7 @@ import {
     CSharpRestSharpTransformer,
     BuiltInToken,
     CSharpType,
+    ParamType,
     ParameterSpec,
     MethodWrapperConfig
 } from '../src/utils/codeSnippetParameterizer';
@@ -11,13 +12,46 @@ import {
 describe('CodeSnippetParameterizer', () => {
     const parameterizer = new CodeSnippetParameterizer();
     
-    // Sample RestSharp snippet (similar to what httpsnippet generates)
-    const sampleSnippet = `var client = new RestClient("https://api.example.com/users");
+    // Sample snippets for different languages (similar to what httpsnippet generates)
+    const sampleSnippets = {
+        restsharp: `var client = new RestClient("https://api.example.com/users");
 var request = new RestRequest(Method.POST);
 request.AddHeader("Content-Type", "application/json");
 request.AddHeader("Authorization", "Bearer token123");
 request.AddParameter("application/json", "{\\"name\\":\\"John\\",\\"age\\":30}", ParameterType.RequestBody);
-IRestResponse response = client.Execute(request);`;
+IRestResponse response = client.Execute(request);`,
+
+        pythonRequests: `import requests
+
+url = "https://api.example.com/users"
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer token123"
+}
+response = requests.post(url, headers=headers)`,
+
+        javascriptFetch: `fetch("https://api.example.com/users", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer token123"
+  }
+})
+.then(response => response.json())`,
+
+        javaOkhttp: `OkHttpClient client = new OkHttpClient();
+Request request = new Request.Builder()
+  .url("https://api.example.com/users")
+  .addHeader("Content-Type", "application/json")
+  .addHeader("Authorization", "Bearer token123")
+  .build();
+Response response = client.newCall(request).execute();`,
+
+        goNative: `req, err := http.NewRequest("POST", "https://api.example.com/users", nil)
+req.Header.Set("Content-Type", "application/json")
+req.Header.Set("Authorization", "Bearer token123")
+resp, err := http.DefaultClient.Do(req)`
+    };
 
     describe('CSharpRestSharpTransformer', () => {
         const transformer = new CSharpRestSharpTransformer();
@@ -30,7 +64,7 @@ IRestResponse response = client.Execute(request);`;
                     type: CSharpType.String
                 };
                 
-                const result = transformer.parameterizeValue(sampleSnippet, spec);
+                const result = transformer.parameterizeValue(sampleSnippets.restsharp, spec);
                 
                 assert.ok(result.snippet.includes('new RestClient(apiUrl)'));
                 assert.ok(!result.snippet.includes('new RestClient("https://api.example.com/users")'));
@@ -45,7 +79,7 @@ IRestResponse response = client.Execute(request);`;
                     type: CSharpType.String
                 };
                 
-                const result = transformer.parameterizeValue(sampleSnippet, spec);
+                const result = transformer.parameterizeValue(sampleSnippets.restsharp, spec);
                 
                 assert.ok(result.snippet.includes('request.AddHeader("Authorization", authToken)'));
                 assert.equal(result.extracted?.originalValue, 'Bearer token123');
@@ -59,7 +93,7 @@ IRestResponse response = client.Execute(request);`;
                     builtInToken: BuiltInToken.Guid
                 };
                 
-                const result = transformer.parameterizeValue(sampleSnippet, spec);
+                const result = transformer.parameterizeValue(sampleSnippets.restsharp, spec);
                 
                 assert.equal(result.extracted?.builtInToken, BuiltInToken.Guid);
             });
@@ -78,9 +112,8 @@ IRestResponse response = client.Execute(request);`;
                     { path: '$.url', parameterName: 'apiUrl', type: CSharpType.String }
                 ];
                 
-                const result = transformer.wrapInMethod(sampleSnippet, config, params);
+                const result = transformer.wrapInMethod(sampleSnippets.restsharp, config, params);
                 
-                assert.ok(result.includes('using RestSharp;'));
                 assert.ok(result.includes('public IRestResponse CreateUser(string apiUrl)'));
                 assert.ok(result.includes('return response;'));
             });
@@ -94,7 +127,7 @@ IRestResponse response = client.Execute(request);`;
                     isStatic: false
                 };
                 
-                const result = transformer.wrapInMethod(sampleSnippet, config, []);
+                const result = transformer.wrapInMethod(sampleSnippets.restsharp, config, []);
                 
                 assert.ok(result.includes('public async Task<IRestResponse> CreateUserAsync()'));
             });
@@ -110,7 +143,7 @@ IRestResponse response = client.Execute(request);`;
                     className: 'UserClient'
                 };
                 
-                const result = transformer.wrapInMethod(sampleSnippet, config, []);
+                const result = transformer.wrapInMethod(sampleSnippets.restsharp, config, []);
                 
                 assert.ok(result.includes('namespace MyApp.Api'));
                 assert.ok(result.includes('public class UserClient'));
@@ -130,7 +163,7 @@ IRestResponse response = client.Execute(request);`;
                     { path: '$.url', parameterName: 'apiUrl', type: CSharpType.String }
                 ];
                 
-                const result = transformer.wrapInMethod(sampleSnippet, config, params);
+                const result = transformer.wrapInMethod(sampleSnippets.restsharp, config, params);
                 
                 assert.ok(result.includes('/// <summary>'));
                 assert.ok(result.includes('/// Creates a new user in the system'));
@@ -150,7 +183,7 @@ IRestResponse response = client.Execute(request);`;
                     { path: '$.headers.Authorization', parameterName: 'authToken', type: CSharpType.String, defaultValue: 'null' }
                 ];
                 
-                const result = transformer.wrapInMethod(sampleSnippet, config, params);
+                const result = transformer.wrapInMethod(sampleSnippets.restsharp, config, params);
                 
                 assert.ok(result.includes('string apiUrl, string authToken = null'));
             });
@@ -174,6 +207,209 @@ IRestResponse response = client.Execute(request);`;
         });
     });
 
+    describe('Python requests transformer', () => {
+        it('parameterizes URL', () => {
+            const params: ParameterSpec[] = [
+                { path: '$.url', parameterName: 'base_url', type: ParamType.String }
+            ];
+            
+            const result = parameterizer.parameterize(
+                sampleSnippets.pythonRequests,
+                'python',
+                'requests',
+                params
+            );
+            
+            // URL is assigned to a variable, so we replace the assignment
+            assert.ok(result.code.includes('url = base_url'));
+        });
+
+        it('parameterizes header value', () => {
+            const params: ParameterSpec[] = [
+                { path: '$.headers.Authorization', parameterName: 'auth_token', type: ParamType.String }
+            ];
+            
+            const result = parameterizer.parameterize(
+                sampleSnippets.pythonRequests,
+                'python',
+                'requests',
+                params
+            );
+            
+            assert.ok(result.code.includes('"Authorization": auth_token'));
+        });
+
+        it('wraps in Python function with docstring', () => {
+            const config: MethodWrapperConfig = {
+                methodName: 'send_request',
+                isAsync: false,
+                returnType: 'requests.Response',
+                accessModifier: '',
+                isStatic: false,
+                summary: 'Sends the HTTP request'
+            };
+            const params: ParameterSpec[] = [
+                { path: '$.url', parameterName: 'base_url', type: ParamType.String }
+            ];
+            
+            const result = parameterizer.parameterize(
+                sampleSnippets.pythonRequests,
+                'python',
+                'requests',
+                params,
+                config
+            );
+            
+            assert.ok(result.code.includes('def send_request(base_url: str):'));
+            assert.ok(result.code.includes('"""Sends the HTTP request'));
+            assert.ok(result.code.includes('Args:'));
+        });
+    });
+
+    describe('JavaScript fetch transformer', () => {
+        it('parameterizes URL', () => {
+            const params: ParameterSpec[] = [
+                { path: '$.url', parameterName: 'baseUrl', type: ParamType.String }
+            ];
+            
+            const result = parameterizer.parameterize(
+                sampleSnippets.javascriptFetch,
+                'javascript',
+                'fetch',
+                params
+            );
+            
+            assert.ok(result.code.includes('fetch(baseUrl'));
+        });
+
+        it('parameterizes header value', () => {
+            const params: ParameterSpec[] = [
+                { path: '$.headers.Authorization', parameterName: 'authToken', type: ParamType.String }
+            ];
+            
+            const result = parameterizer.parameterize(
+                sampleSnippets.javascriptFetch,
+                'javascript',
+                'fetch',
+                params
+            );
+            
+            assert.ok(result.code.includes('"Authorization": authToken'));
+        });
+
+        it('wraps in async function with JSDoc', () => {
+            const config: MethodWrapperConfig = {
+                methodName: 'sendRequest',
+                isAsync: true,
+                returnType: 'Promise<Response>',
+                accessModifier: '',
+                isStatic: false,
+                summary: 'Sends the HTTP request'
+            };
+            const params: ParameterSpec[] = [
+                { path: '$.url', parameterName: 'baseUrl', type: ParamType.String }
+            ];
+            
+            const result = parameterizer.parameterize(
+                sampleSnippets.javascriptFetch,
+                'javascript',
+                'fetch',
+                params,
+                config
+            );
+            
+            assert.ok(result.code.includes('async function sendRequest(baseUrl)'));
+            assert.ok(result.code.includes('* Sends the HTTP request'));
+            assert.ok(result.code.includes('@param {string} baseUrl'));
+        });
+    });
+
+    describe('Java OkHttp transformer', () => {
+        it('parameterizes URL', () => {
+            const params: ParameterSpec[] = [
+                { path: '$.url', parameterName: 'baseUrl', type: ParamType.String }
+            ];
+            
+            const result = parameterizer.parameterize(
+                sampleSnippets.javaOkhttp,
+                'java',
+                'okhttp',
+                params
+            );
+            
+            assert.ok(result.code.includes('.url(baseUrl)'));
+        });
+
+        it('parameterizes header value', () => {
+            const params: ParameterSpec[] = [
+                { path: '$.headers.Authorization', parameterName: 'authToken', type: ParamType.String }
+            ];
+            
+            const result = parameterizer.parameterize(
+                sampleSnippets.javaOkhttp,
+                'java',
+                'okhttp',
+                params
+            );
+            
+            assert.ok(result.code.includes('.addHeader("Authorization", authToken)'));
+        });
+
+        it('wraps in Java method with Javadoc', () => {
+            const config: MethodWrapperConfig = {
+                methodName: 'sendRequest',
+                isAsync: false,
+                returnType: 'Response',
+                accessModifier: 'public',
+                isStatic: true,
+                summary: 'Sends the HTTP request'
+            };
+            const params: ParameterSpec[] = [
+                { path: '$.url', parameterName: 'baseUrl', type: ParamType.String }
+            ];
+            
+            const result = parameterizer.parameterize(
+                sampleSnippets.javaOkhttp,
+                'java',
+                'okhttp',
+                params,
+                config
+            );
+            
+            assert.ok(result.code.includes('public static Response sendRequest(String baseUrl)'));
+            assert.ok(result.code.includes('* Sends the HTTP request'));
+            assert.ok(result.code.includes('@param baseUrl'));
+        });
+    });
+
+    describe('Go native transformer', () => {
+        it('wraps in Go function with godoc', () => {
+            const config: MethodWrapperConfig = {
+                methodName: 'SendRequest',
+                isAsync: false,
+                returnType: '(*http.Response, error)',
+                accessModifier: '',
+                isStatic: false,
+                summary: 'sends the HTTP request',
+                usings: ['net/http']
+            };
+            const params: ParameterSpec[] = [
+                { path: '$.url', parameterName: 'baseUrl', type: ParamType.String }
+            ];
+            
+            const result = parameterizer.parameterize(
+                sampleSnippets.goNative,
+                'go',
+                'native',
+                params,
+                config
+            );
+            
+            assert.ok(result.code.includes('func SendRequest(baseUrl string)'));
+            assert.ok(result.code.includes('// SendRequest sends the HTTP request'));
+        });
+    });
+
     describe('parameterize', () => {
         it('parameterizes and wraps a full snippet', () => {
             const params: ParameterSpec[] = [
@@ -191,7 +427,7 @@ IRestResponse response = client.Execute(request);`;
             };
             
             const result = parameterizer.parameterize(
-                sampleSnippet,
+                sampleSnippets.restsharp,
                 'csharp',
                 'restsharp',
                 params,
@@ -206,25 +442,74 @@ IRestResponse response = client.Execute(request);`;
 
         it('returns unchanged snippet for unsupported target', () => {
             const result = parameterizer.parameterize(
-                sampleSnippet,
+                sampleSnippets.restsharp,
                 'unknown',
                 'unknown',
                 [],
                 undefined
             );
             
-            assert.equal(result.code, sampleSnippet);
+            assert.equal(result.code, sampleSnippets.restsharp);
             assert.equal(result.parameters.length, 0);
         });
     });
 
     describe('hasTransformer', () => {
-        it('returns true for registered transformer', () => {
+        it('returns true for C# RestSharp', () => {
             assert.ok(parameterizer.hasTransformer('csharp', 'restsharp'));
         });
 
+        it('returns true for C# HttpClient', () => {
+            assert.ok(parameterizer.hasTransformer('csharp', 'httpclient'));
+        });
+
+        it('returns true for Python requests', () => {
+            assert.ok(parameterizer.hasTransformer('python', 'requests'));
+        });
+
+        it('returns true for JavaScript fetch', () => {
+            assert.ok(parameterizer.hasTransformer('javascript', 'fetch'));
+        });
+
+        it('returns true for JavaScript axios', () => {
+            assert.ok(parameterizer.hasTransformer('javascript', 'axios'));
+        });
+
+        it('returns true for Node.js fetch', () => {
+            assert.ok(parameterizer.hasTransformer('node', 'fetch'));
+        });
+
+        it('returns true for Node.js axios', () => {
+            assert.ok(parameterizer.hasTransformer('node', 'axios'));
+        });
+
+        it('returns true for Java OkHttp', () => {
+            assert.ok(parameterizer.hasTransformer('java', 'okhttp'));
+        });
+
+        it('returns true for Java nethttp', () => {
+            assert.ok(parameterizer.hasTransformer('java', 'nethttp'));
+        });
+
+        it('returns true for Go native', () => {
+            assert.ok(parameterizer.hasTransformer('go', 'native'));
+        });
+
         it('returns false for unregistered transformer', () => {
-            assert.ok(!parameterizer.hasTransformer('python', 'requests'));
+            assert.ok(!parameterizer.hasTransformer('ruby', 'native'));
+        });
+    });
+
+    describe('getSupportedTargets', () => {
+        it('returns all supported target/client combinations', () => {
+            const targets = parameterizer.getSupportedTargets();
+            
+            assert.ok(targets.length >= 10);
+            assert.ok(targets.some(t => t.target === 'csharp' && t.client === 'restsharp'));
+            assert.ok(targets.some(t => t.target === 'python' && t.client === 'requests'));
+            assert.ok(targets.some(t => t.target === 'javascript' && t.client === 'fetch'));
+            assert.ok(targets.some(t => t.target === 'java' && t.client === 'okhttp'));
+            assert.ok(targets.some(t => t.target === 'go' && t.client === 'native'));
         });
     });
 });

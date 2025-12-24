@@ -184,19 +184,11 @@ export class CodeSnippetController {
                     path: '$.headers.Authorization',
                     parameterName: 'authToken',
                     type: CSharpType.String,
-                    defaultValue: 'null'
+                    defaultValue: this.getDefaultNullValue(tk)
                 });
             }
             
-            const methodConfig: MethodWrapperConfig = {
-                methodName: 'SendRequestAsync',
-                isAsync: true,
-                returnType: 'Task<IRestResponse>',
-                accessModifier: 'public',
-                isStatic: false,
-                summary: 'Sends the HTTP request',
-                usings: ['System.Threading.Tasks']
-            };
+            const methodConfig = this.getMethodConfigForTarget(tk, ck);
             
             const parameterized = codeSnippetParameterizer.parameterize(
                 result,
@@ -214,6 +206,83 @@ export class CodeSnippetController {
         } catch (reason) {
             Logger.error('Unable to preview generated code snippet:', reason);
             window.showErrorMessage(reason);
+        }
+    }
+
+    private getDefaultNullValue(targetKey: string): string {
+        switch (targetKey) {
+            case 'python':
+                return 'None';
+            case 'javascript':
+            case 'node':
+                return 'null';
+            case 'go':
+                return '""';
+            default:
+                return 'null';
+        }
+    }
+
+    private getMethodConfigForTarget(targetKey: string, clientKey: string): MethodWrapperConfig {
+        switch (targetKey) {
+            case 'csharp':
+                return {
+                    methodName: 'SendRequestAsync',
+                    isAsync: true,
+                    returnType: clientKey === 'httpclient' ? 'Task<HttpResponseMessage>' : 'Task<IRestResponse>',
+                    accessModifier: 'public',
+                    isStatic: false,
+                    summary: 'Sends the HTTP request',
+                    usings: ['System.Threading.Tasks']
+                };
+            case 'python':
+                return {
+                    methodName: 'send_request',
+                    isAsync: false,
+                    returnType: 'requests.Response',
+                    accessModifier: '',
+                    isStatic: false,
+                    summary: 'Sends the HTTP request',
+                    usings: ['requests']
+                };
+            case 'javascript':
+            case 'node':
+                return {
+                    methodName: 'sendRequest',
+                    isAsync: true,
+                    returnType: 'Promise<Response>',
+                    accessModifier: '',
+                    isStatic: false,
+                    summary: 'Sends the HTTP request'
+                };
+            case 'java':
+                return {
+                    methodName: 'sendRequest',
+                    isAsync: false,
+                    returnType: clientKey === 'nethttp' ? 'HttpResponse<String>' : 'Response',
+                    accessModifier: 'public',
+                    isStatic: true,
+                    summary: 'Sends the HTTP request'
+                };
+            case 'go':
+                return {
+                    methodName: 'SendRequest',
+                    isAsync: false,
+                    returnType: '(*http.Response, error)',
+                    accessModifier: '',
+                    isStatic: false,
+                    summary: 'sends the HTTP request',
+                    usings: ['net/http']
+                };
+            default:
+                return {
+                    methodName: 'sendRequest',
+                    isAsync: false,
+                    returnType: 'any',
+                    accessModifier: 'public',
+                    isStatic: false,
+                    summary: 'Sends the HTTP request'
+                };
         }
     }
 
