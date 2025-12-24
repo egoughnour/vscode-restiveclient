@@ -24,6 +24,8 @@ enum ParseState {
 interface BodyParseResult {
     body?: string | Stream;
     templateOrder: TemplateOrder;
+    /** The raw body text for display/code generation (always a string, never contains file indicators) */
+    rawBodyText?: string;
 }
 
 export class HttpRequestParser implements RequestParser {
@@ -105,10 +107,12 @@ export class HttpRequestParser implements RequestParser {
         const bodyResult = await this.parseBody(bodyLines, contentTypeHeader);
         let templateOrder = bodyResult.templateOrder;
         let body = bodyResult.body;
+        let rawBodyText = bodyResult.rawBodyText;
         if (isGraphQlRequest) {
             const graphQlResult = await this.createGraphQlBody(variableLines, contentTypeHeader, bodyResult);
             body = graphQlResult.body;
             templateOrder = graphQlResult.templateOrder;
+            rawBodyText = graphQlResult.body; // For GraphQL, the raw body is the constructed JSON payload
         } else if (this.settings.formParamEncodingStrategy !== FormParamEncodingStrategy.Never && typeof body === 'string' && MimeUtility.isFormUrlEncoded(contentTypeHeader)) {
             if (this.settings.formParamEncodingStrategy === FormParamEncodingStrategy.Always) {
                 const stringPairs = body.split('&');
@@ -118,9 +122,13 @@ export class HttpRequestParser implements RequestParser {
                     const value = values.join('=');
                     encodedStringPairs.push(`${encodeURIComponent(name)}=${encodeURIComponent(value)}`);
                 }
-                body = encodedStringPairs.join('&');
+                const encodedBody = encodedStringPairs.join('&');
+                body = encodedBody;
+                rawBodyText = encodedBody; // Use encoded body as raw body text
             } else {
-                body = encodeurl(body);
+                const encodedBody = encodeurl(body) as string;
+                body = encodedBody;
+                rawBodyText = encodedBody; // Use encoded body as raw body text
             }
         }
 
@@ -143,8 +151,12 @@ export class HttpRequestParser implements RequestParser {
             async (text: string) => VariableProcessor.processRawRequest(text)
         );
         body = outgoingRequest.body;
+        // After patching, update rawBodyText if the body was modified to a string
+        if (typeof body === 'string') {
+            rawBodyText = body;
+        }
 
-        return new HttpRequest(requestLine.method, requestLine.url, headers, body, bodyLines.join(EOL), name);
+        return new HttpRequest(requestLine.method, requestLine.url, headers, body, rawBodyText, name);
     }
 
     private async createGraphQlBody(
@@ -198,7 +210,7 @@ export class HttpRequestParser implements RequestParser {
 
     private async parseBody(lines: string[], contentTypeHeader: string | undefined): Promise<BodyParseResult> {
         if (lines.length === 0) {
-            return { body: undefined, templateOrder: TemplateOrder.None };
+            return { body: undefined, templateOrder: TemplateOrder.None, rawBodyText: undefined };
         }
 
         // Check if needed to upload file
@@ -208,22 +220,25 @@ export class HttpRequestParser implements RequestParser {
                     p += `${(i === 0 || c.startsWith('&') ? '' : EOL)}${c}`;
                     return p;
                 }, '');
-                return { body, templateOrder: TemplateOrder.None };
+                return { body, templateOrder: TemplateOrder.None, rawBodyText: body };
             } else {
                 const lineEnding = this.getLineEnding(contentTypeHeader);
                 let body = lines.join(lineEnding);
                 if (MimeUtility.isNewlineDelimitedJSON(contentTypeHeader)) {
                     body += lineEnding;
                 }
-                return { body, templateOrder: TemplateOrder.None };
+                return { body, templateOrder: TemplateOrder.None, rawBodyText: body };
             }
         } else {
-            const combinedStream = CombinedStream.create({ maxDataSize: 10 * 1024 * 1024 });
-            const parts: Array<string | Stream> = [];
+            // When file indicators are present, we always read file contents as strings
+            // to ensure rawBodyText is available for code snippet generation
+            const stringParts: string[] = [];
+            const streamParts: Array<string | Stream> = [];
             let templateOrder: TemplateOrder = TemplateOrder.None;
             let templateRequested = false;
             let forbidTemplate = false;
             let materialize = false;
+            let hasStreamPart = false;
 
             for (const [index, line] of lines.entries()) {
                 if (this.inputFileSyntax.test(line)) {
@@ -235,16 +250,16 @@ export class HttpRequestParser implements RequestParser {
                         const parsedIndicator = this.parseIndicator(indicator);
                         if (parsedIndicator.forbidTemplate) {
                             if (templateRequested) {
-                                throw new Error('REST Client body parsing: conflicting template instructions for "<." and "@" markers.');
+                                throw new Error('Restive Client body parsing: conflicting template instructions for "<." and "@" markers.');
                             }
                             forbidTemplate = true;
                         }
                         if (parsedIndicator.templateOrder !== TemplateOrder.None) {
                             if (templateRequested && templateOrder !== parsedIndicator.templateOrder) {
-                                throw new Error('REST Client body parsing: conflicting template substitution order markers.');
+                                throw new Error('Restive Client body parsing: conflicting template substitution order markers.');
                             }
                             if (forbidTemplate) {
-                                throw new Error('REST Client body parsing: template processing disabled for this body but "@" marker found.');
+                                throw new Error('Restive Client body parsing: template processing disabled for this body but "@" marker found.');
                             }
                             templateRequested = true;
                             templateOrder = parsedIndicator.templateOrder;
@@ -254,35 +269,49 @@ export class HttpRequestParser implements RequestParser {
                         }
                         const fileAbsolutePath = await resolveRequestBodyPath(inputFilePath);
                         if (fileAbsolutePath) {
-                            if (parsedIndicator.encoding) {
-                                const buffer = await fs.readFile(fileAbsolutePath);
-                                parts.push(buffer.toString(parsedIndicator.encoding as BufferEncoding));
+                            // Always read file content as string for rawBodyText
+                            const encoding = parsedIndicator.encoding || this.defaultFileEncoding;
+                            const buffer = await fs.readFile(fileAbsolutePath);
+                            const fileContent = buffer.toString(encoding as BufferEncoding);
+                            stringParts.push(fileContent);
+                            // For the actual body, use stream if not materializing
+                            if (parsedIndicator.encoding || materialize || templateRequested) {
+                                streamParts.push(fileContent);
                             } else {
-                                parts.push(fs.createReadStream(fileAbsolutePath));
+                                streamParts.push(fs.createReadStream(fileAbsolutePath));
+                                hasStreamPart = true;
                             }
                         } else {
-                            parts.push(line);
+                            stringParts.push(line);
+                            streamParts.push(line);
                         }
                     }
                 } else {
-                    parts.push(line);
+                    stringParts.push(line);
+                    streamParts.push(line);
                 }
 
                 if ((index !== lines.length - 1) || MimeUtility.isMultiPartFormData(contentTypeHeader)) {
                     const ending = this.getLineEnding(contentTypeHeader);
-                    parts.push(ending);
+                    stringParts.push(ending);
+                    streamParts.push(ending);
                 }
             }
 
             const finalTemplateOrder = templateRequested ? templateOrder : TemplateOrder.None;
-            if (materialize || templateRequested) {
-                const textBody = await this.materializeParts(parts);
-                return { body: textBody, templateOrder: finalTemplateOrder };
+            const rawBodyText = stringParts.join('');
+            
+            if (materialize || templateRequested || !hasStreamPart) {
+                // Return string body when we need to materialize or when there are no stream parts
+                return { body: rawBodyText, templateOrder: finalTemplateOrder, rawBodyText };
             }
-            for (const part of parts) {
+            
+            // Use stream for body but keep rawBodyText available
+            const combinedStream = CombinedStream.create({ maxDataSize: 10 * 1024 * 1024 });
+            for (const part of streamParts) {
                 combinedStream.append(part);
             }
-            return { body: combinedStream, templateOrder: finalTemplateOrder };
+            return { body: combinedStream, templateOrder: finalTemplateOrder, rawBodyText };
         }
     }
 
@@ -328,20 +357,6 @@ export class HttpRequestParser implements RequestParser {
         };
     }
 
-    private async materializeParts(parts: Array<string | Stream>): Promise<string> {
-        const chunks: string[] = [];
-        for (const part of parts) {
-            if (typeof part === 'string') {
-                chunks.push(part);
-            } else if (Buffer.isBuffer(part)) {
-                chunks.push(part.toString());
-            } else {
-                chunks.push(await convertStreamToString(part));
-            }
-        }
-        return chunks.join('');
-    }
-
     private async materializeBody(body: string | Stream | undefined): Promise<string | undefined> {
         if (body === undefined) {
             return undefined;
@@ -363,7 +378,7 @@ export class HttpRequestParser implements RequestParser {
             return first;
         }
         if (first !== second) {
-            throw new Error('REST Client body parsing: conflicting template substitution order markers in GraphQL body and variables.');
+            throw new Error('Restive Client body parsing: conflicting template substitution order markers in GraphQL body and variables.');
         }
         return first;
     }

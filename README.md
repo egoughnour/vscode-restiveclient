@@ -115,7 +115,7 @@ Restive Client extension also provides the flexibility that you can send the req
 Press `F1`, type `ext install` then search for `restive-client`.
 
 ## Making Request
-![rest-client](https://raw.githubusercontent.com/egoughnour/vscode-restiveclient/master/images/usage.gif)
+![restive-client](https://raw.githubusercontent.com/egoughnour/vscode-restiveclient/master/images/usage.gif)
 ### Request Line
 The first non-empty line of the selection (or document if nothing is selected) is the _Request Line_.
 Below are some examples of _Request Line_:
@@ -143,11 +143,11 @@ GET https://example.com/comments
 ```
 
 ### Request Headers
-Once you've written your _Request line_, the lines that immediately follow until the first empty line will be parsed as _Request Headers_. These headers should follow the standard `field-name: field-value` format, with each line representing a single header. By default if you don't explicitly specify a `User-Agent` header, `Restive Client Extension` will automatically add one with the value `vscode-restclient`. However, if you want to change the default value, you can do so in the `restive-client.defaultHeaders` setting.
+Once you've written your _Request line_, the lines that immediately follow until the first empty line will be parsed as _Request Headers_. These headers should follow the standard `field-name: field-value` format, with each line representing a single header. By default if you don't explicitly specify a `User-Agent` header, `Restive Client Extension` will automatically add one with the value `vscode-restiveclient`. However, if you want to change the default value, you can do so in the `restive-client.defaultHeaders` setting.
 
 Below are examples of _Request Headers_:
 ```http
-User-Agent: rest-client
+User-Agent: restive-client
 Accept-Language: en-GB,en-US;q=0.8,en;q=0.6,zh-CN;q=0.4
 Content-Type: application/json
 ```
@@ -292,7 +292,7 @@ query ($name: String!, $owner: String!) {
 }
 
 {
-    "name": "vscode-restclient",
+    "name": "vscode-restiveclient",
     "owner": "Huachao"
 }
 ```
@@ -838,7 +838,7 @@ exchange | Preview the whole HTTP exchange(request and response)
 
 ## Settings
 * `restive-client.followredirect`: Follow HTTP 3xx responses as redirects. (Default is __true__)
-* `restive-client.defaultHeaders`: If particular headers are omitted in request header, these will be added as headers for each request. (Default is `{ "User-Agent": "vscode-restclient", "Accept-Encoding": "gzip" }`)
+* `restive-client.defaultHeaders`: If particular headers are omitted in request header, these will be added as headers for each request. (Default is `{ "User-Agent": "vscode-restiveclient", "Accept-Encoding": "gzip" }`)
 * `restive-client.timeoutinmilliseconds`: Timeout in milliseconds. 0 for infinity. (Default is __0__)
 * `restive-client.showResponseInDifferentTab`: Show response in different tab. (Default is __false__)
 * `restive-client.requestNameAsResponseTabTitle`: Show request name as the response tab title. Only valid when using html view, if no request name is specified defaults to "Response". (Default is __false__)

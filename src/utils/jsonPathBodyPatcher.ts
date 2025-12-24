@@ -133,7 +133,7 @@ export async function applyJsonPathPokes(
         data = JSON.parse(jsonText);
     } catch (e) {
         throw new Error(
-            `REST Client JSON patch: body is not valid JSON: ${String(e)}`
+            `Restive Client JSON patch: body is not valid JSON: ${String(e)}`
         );
     }
 
@@ -202,7 +202,7 @@ function setByJsonPointer(target: any, pointer: string, value: any): void {
             return;
         } else {
             throw new Error(
-                'REST Client JSON patch: cannot set root to a primitive value'
+                'Restive Client JSON patch: cannot set root to a primitive value'
             );
         }
     }
