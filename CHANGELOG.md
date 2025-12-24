@@ -1,3 +1,15 @@
+## 0.30.0 (2024/12/23)
+* __Feature__: Multi-language code snippet parameterization - generate code snippets wrapped in method/function signatures with parameterized URLs and headers
+* __Feature__: Support 10 target/client combinations across 6 languages:
+  - C# (RestSharp, HttpClient) - with XML docs, async/Task, namespace/class wrapping
+  - Python (requests) - with docstrings and type hints
+  - JavaScript (fetch, axios) - with JSDoc comments and async functions
+  - Node.js (fetch, axios) - with JSDoc comments and async functions
+  - Java (OkHttp, java.net.http) - with Javadoc and static methods
+  - Go (native) - with godoc comments
+* __Improvement__: Visual indicator (✨) in QuickPick showing which clients support parameterization
+* __Improvement__: Third step in code snippet generation workflow for selecting parameterization options
+
 ## 0.29.0 (2024/12/23)
 * __Bug Fix__: Fix code snippet generation (`Generate Code Snippet`, `Copy Request As cURL`) to use resolved file content instead of file indicator syntax (e.g., `< /path/to/file.json`)
 * __Bug Fix__: Ensure `rawBody` always contains materialized content for code generation, even when HTTP body is streamed
