@@ -1,3 +1,9 @@
+## 0.29.0 (2024/12/23)
+* __Bug Fix__: Fix code snippet generation (`Generate Code Snippet`, `Copy Request As cURL`) to use resolved file content instead of file indicator syntax (e.g., `< /path/to/file.json`)
+* __Bug Fix__: Ensure `rawBody` always contains materialized content for code generation, even when HTTP body is streamed
+* __Improvement__: Add regression tests for code snippet generation with file-based request bodies
+* __Improvement__: File content is now always read upfront when file indicators are present, ensuring consistent behavior
+
 ## 0.28.0 (2024/12/23)
 * __Feature__: Add JSONPath-based body patching for JSON request bodies via `X-RestiveClient-JsonPatch` header
 * __Feature__: Add XPath-based body patching for XML request bodies via `X-RestiveClient-XmlPatch` header

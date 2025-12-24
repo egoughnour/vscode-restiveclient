@@ -44,7 +44,7 @@ export class EnvironmentController {
                 }));
 
         const itemPickList: EnvironmentPickItem[] = [EnvironmentController.noEnvironmentPickItem, ...userEnvironments];
-        const item = await window.showQuickPick(itemPickList, { placeHolder: "Select REST Client Environment" });
+        const item = await window.showQuickPick(itemPickList, { placeHolder: "Select Restive Client Environment" });
         if (!item) {
             return;
         }

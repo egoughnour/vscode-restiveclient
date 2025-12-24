@@ -2,7 +2,7 @@
   "name": "restive-client",
   "displayName": "Restive Client",
   "description": "Restive Client for Visual Studio Code",
-  "version": "0.28.0",
+  "version": "0.29.0",
   "publisher": "egoughnour",
   "author": {
     "name": "Erik Goughnour",
@@ -239,22 +239,22 @@
         {
           "when": "httpResponsePreviewFocus",
           "command": "restive-client.fold-response",
-          "group": "1_rest-client@1"
+          "group": "1_restive-client@1"
         },
         {
           "when": "httpResponsePreviewFocus",
           "command": "restive-client.unfold-response",
-          "group": "1_rest-client@2"
+          "group": "1_restive-client@2"
         },
         {
           "when": "isHTMLResponse",
           "command": "restive-client.preview-html-response-body",
-          "group": "1_rest-client@3"
+          "group": "1_restive-client@3"
         },
         {
           "when": "isHTMLResponse",
           "command": "restive-client.show-raw-response",
-          "group": "1_rest-client@4"
+          "group": "1_restive-client@4"
         },
         {
           "when": "codeSnippetPreviewFocus",
@@ -266,17 +266,17 @@
         {
           "command": "restive-client.request",
           "when": "editorTextFocus && editorLangId == http",
-          "group": "rest-client@1"
+          "group": "restive-client@1"
         },
         {
           "command": "restive-client.generate-codesnippet",
           "when": "editorTextFocus && editorLangId == http",
-          "group": "rest-client@2"
+          "group": "restive-client@2"
         },
         {
           "command": "restive-client.copy-request-as-curl",
           "when": "editorTextFocus && editorLangId == http",
-          "group": "rest-client@3"
+          "group": "restive-client@3"
         }
       ]
     },
@@ -618,13 +618,13 @@
           "type": "boolean",
           "default": true,
           "scope": "resource",
-          "markdownDescription": "Controls whether to highlight response body for response whose size is larger than limit specified by `rest-client.largeResponseSizeLimitInMB`"
+          "markdownDescription": "Controls whether to highlight response body for response whose size is larger than limit specified by `restive-client.largeResponseSizeLimitInMB`"
         },
         "restive-client.disableAddingHrefLinkForLargeResponse": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
-          "markdownDescription": "Controls whether to add href link in previewed response for response whose size is larger than limit specified by `rest-client.largeResponseSizeLimitInMB`"
+          "markdownDescription": "Controls whether to add href link in previewed response for response whose size is larger than limit specified by `restive-client.largeResponseSizeLimitInMB`"
         },
         "restive-client.largeResponseBodySizeLimitInMB": {
           "type": "number",
@@ -632,7 +632,7 @@
           "minimum": 0,
           "exclusiveMinimum": true,
           "scope": "resource",
-          "markdownDescription": "Set the response body size threshold of MB to identify whether a response is a so-called 'large response', only used when `rest-client.disableHighlightResponseBodyForLargeResponse` and/or `rest-client.disableAddingHrefLinkForLargeResponse` is set to true"
+          "markdownDescription": "Set the response body size threshold of MB to identify whether a response is a so-called 'large response', only used when `restive-client.disableHighlightResponseBodyForLargeResponse` and/or `restive-client.disableAddingHrefLinkForLargeResponse` is set to true"
         },
         "restive-client.previewColumn": {
           "type": "string",

@@ -1,10 +1,10 @@
 ---
 name: Bug report
-about: Create a report to help REST Client improve
+about: Create a report to help Restive Client improve
 
 ---
 
-- REST Client Version:
+- Restive Client Version:
 - VSCode Version:
 - OS Version:
 

@@ -4,10 +4,10 @@ import * as path from 'path';
 import { HistoricalHttpRequest } from '../models/httpRequest';
 import { JsonFileUtility } from './jsonFileUtility';
 
-const restClientDir = 'rest-client';
-const rootPath = process.env.VSC_REST_CLIENT_HOME !== undefined
-    ? process.env.VSC_REST_CLIENT_HOME
-    : path.join(os.homedir(), `.${restClientDir}`);
+const restiveClientDir = 'restive-client';
+const rootPath = process.env.VSC_RESTIVE_CLIENT_HOME !== undefined
+    ? process.env.VSC_RESTIVE_CLIENT_HOME
+    : path.join(os.homedir(), `.${restiveClientDir}`);
 
 function getCachePath(): string {
     if (fs.existsSync(rootPath)) {
@@ -15,7 +15,7 @@ function getCachePath(): string {
     }
 
     if (process.env.XDG_CACHE_HOME !== undefined) {
-        return path.join(process.env.XDG_CACHE_HOME, restClientDir);
+        return path.join(process.env.XDG_CACHE_HOME, restiveClientDir);
     }
 
     return rootPath;
@@ -27,7 +27,7 @@ function getStatePath(): string {
     }
 
     if (process.env.XDG_STATE_HOME !== undefined) {
-        return path.join(process.env.XDG_STATE_HOME, restClientDir);
+        return path.join(process.env.XDG_STATE_HOME, restiveClientDir);
     }
 
     return rootPath;

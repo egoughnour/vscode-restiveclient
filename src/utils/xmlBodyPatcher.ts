@@ -20,16 +20,16 @@ export async function applyXPathPokes(
         errorHandler: {
             warning: () => undefined,
             error: (msg: string) => {
-                throw new Error(`REST Client XML patch: body is not valid XML: ${msg}`);
+                throw new Error(`Restive Client XML patch: body is not valid XML: ${msg}`);
             },
             fatalError: (msg: string) => {
-                throw new Error(`REST Client XML patch: body is not valid XML: ${msg}`);
+                throw new Error(`Restive Client XML patch: body is not valid XML: ${msg}`);
             }
         }
     });
     const doc = parser.parseFromString(xmlText, 'text/xml');
     if (!doc || !doc.documentElement) {
-        throw new Error('REST Client XML patch: unable to parse XML body');
+        throw new Error('Restive Client XML patch: unable to parse XML body');
     }
 
     for (const rule of rules) {
