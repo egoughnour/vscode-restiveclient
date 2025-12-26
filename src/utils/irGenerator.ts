@@ -559,8 +559,11 @@ export class IRGenerator {
         // Extract from URL
         const urlVars = this.findVariables(url);
         for (const v of urlVars) {
-            // Determine if path or query
-            const source: InputBindingSource = url.indexOf('?' + v) >= 0 || url.indexOf('&' + v) >= 0 ? 'query' : 'path';
+            // Determine if path or query by checking position relative to ?
+            const queryStart = url.indexOf('?');
+            const varPosition = url.indexOf(v.full);
+            const isQuery = queryStart >= 0 && varPosition > queryStart;
+            const source: InputBindingSource = isQuery ? 'query' : 'path';
             addInput(v.inner, source, v.full);
         }
 
