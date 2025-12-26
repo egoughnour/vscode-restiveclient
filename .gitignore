@@ -7,3 +7,5 @@ dist
 # Logs
 npm-debug.log*
 .stryker-tmp/
+.claude/AGENTS.md
+.github/copilot-instructions.md
