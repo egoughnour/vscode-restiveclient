@@ -7,6 +7,7 @@ import { EnvironmentController } from './controllers/environmentController';
 import { HistoryController } from './controllers/historyController';
 import { RequestController } from './controllers/requestController';
 import { SwaggerController } from './controllers/swaggerController';
+import { ExternalGeneratorController } from './controllers/externalGeneratorController';
 import { CustomVariableDiagnosticsProvider } from "./providers/customVariableDiagnosticsProvider";
 import { RequestBodyDocumentLinkProvider } from './providers/documentLinkProvider';
 import { EnvironmentOrFileVariableHoverProvider } from './providers/environmentOrFileVariableHoverProvider';
@@ -34,6 +35,7 @@ export async function activate(context: ExtensionContext) {
     const codeSnippetController = new CodeSnippetController(context);
     const environmentController = await EnvironmentController.create();
     const swaggerController = new SwaggerController(context);
+    const externalGeneratorController = new ExternalGeneratorController();
     context.subscriptions.push(requestController);
     context.subscriptions.push(historyController);
     context.subscriptions.push(codeSnippetController);
@@ -54,6 +56,7 @@ export async function activate(context: ExtensionContext) {
         });
     }));
     context.subscriptions.push(commands.registerCommand('restive-client.import-swagger', async () => swaggerController.import()));
+    context.subscriptions.push(commands.registerCommand('restive-client.generate-express-project-external', () => externalGeneratorController.run()));
 
 
     const documentSelector = [
