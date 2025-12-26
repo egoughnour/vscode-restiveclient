@@ -1,3 +1,19 @@
+## 0.31.0 (2024/12/26)
+* __Feature__: Add Operation IR (Intermediate Representation) generator for parsing `.http` files into a stable IR format
+* __Feature__: Add OpenAPI 3.0 YAML generator from Operation IR
+* __Feature__: Add Express.js route and handler generator from Operation IR
+* __Feature__: Add complete Express project scaffold generator (generator-express-no-stress compatible)
+  - Generates full runnable Express.js project from `.http` files
+  - Includes package.json, tsconfig.json, environment files
+  - OpenAPI spec with express-openapi-validator integration
+  - Swagger UI for API exploration
+  - Controllers, routes, and service stubs
+  - Docker support (Dockerfile, docker-compose.yml)
+  - Test scaffolding with Jest and supertest
+  - TypeScript and JavaScript modes
+* __Improvement__: Complete `.http` → IR → OpenAPI → Express project pipeline
+* __Improvement__: 369 tests passing across all generator modules
+
 ## 0.30.0 (2024/12/23)
 * __Feature__: Multi-language code snippet parameterization - generate code snippets wrapped in method/function signatures with parameterized URLs and headers
 * __Feature__: Support 10 target/client combinations across 6 languages:
