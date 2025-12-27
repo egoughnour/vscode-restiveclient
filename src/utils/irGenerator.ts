@@ -253,8 +253,26 @@ export class IRGenerator {
                     break;
 
                 case ParseState.Header:
+                    if (CommentBlockStartRegex.test(line)) {
+                        insideCommentBlock = true;
+                        postLines.push(line);
+                        continue;
+                    }
+                    if (insideCommentBlock) {
+                        postLines.push(line);
+                        if (CommentBlockEndRegex.test(line)) {
+                            insideCommentBlock = false;
+                        }
+                        continue;
+                    }
+                    if (CommentBlockEndRegex.test(line)) {
+                        postLines.push(line);
+                        continue;
+                    }
                     if (trimmed === '') {
                         state = ParseState.Body;
+                    } else if (this.isCommentLine(line)) {
+                        postLines.push(line);
                     } else {
                         headerLines.push(trimmed);
                     }

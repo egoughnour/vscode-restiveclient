@@ -188,6 +188,11 @@
         "command": "restive-client.generate-express-project-external",
         "title": "Generate Express Project (External Generator)",
         "category": "Restive Client"
+      },
+      {
+        "command": "restive-client.generate-express-project-ai",
+        "title": "Generate Express Project (AI)",
+        "category": "Restive Client"
       }
     ],
     "menus": {
@@ -756,6 +761,128 @@
           "default": "express-no-stress-typescript",
           "scope": "resource",
           "description": "Generator name for the TypeScript variant."
+        },
+        "restive-client.ai.provider": {
+          "type": "string",
+          "enum": [
+            "",
+            "anthropic",
+            "openai"
+          ],
+          "default": "",
+          "scope": "resource",
+          "description": "AI provider override (leave empty to infer from base URL)."
+        },
+        "restive-client.ai.baseUrl": {
+          "type": "string",
+          "default": "https://api.anthropic.com/v1/",
+          "scope": "resource",
+          "description": "Base URL for the OpenAI/Anthropic compatible API."
+        },
+        "restive-client.ai.apiKey": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "API key for AI generation (leave empty to use ANTHROPIC_API_KEY or OPENAI_API_KEY)."
+        },
+        "restive-client.ai.model": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Model name to use (leave empty to use provider defaults)."
+        },
+        "restive-client.ai.temperature": {
+          "type": "number",
+          "default": 0.2,
+          "minimum": 0,
+          "scope": "resource",
+          "description": "Sampling temperature for AI generation."
+        },
+        "restive-client.ai.maxTokens": {
+          "type": "number",
+          "default": 800,
+          "minimum": 1,
+          "scope": "resource",
+          "description": "Maximum tokens for AI responses."
+        },
+        "restive-client.ai.thinkingThreshold": {
+          "type": "number",
+          "default": 8,
+          "minimum": 0,
+          "scope": "resource",
+          "description": "Complexity threshold that enables Anthropic thinking mode."
+        },
+        "restive-client.ai.thinkingBudgetTokens": {
+          "type": "number",
+          "default": 2000,
+          "minimum": 0,
+          "scope": "resource",
+          "description": "Token budget for Anthropic thinking mode."
+        },
+        "restive-client.ai.anthropicVersion": {
+          "type": "string",
+          "default": "2023-06-01",
+          "scope": "resource",
+          "description": "Anthropic API version header value."
+        },
+        "restive-client.ai.defaultLanguage": {
+          "type": "string",
+          "enum": [
+            "typescript",
+            "javascript"
+          ],
+          "default": "typescript",
+          "scope": "resource",
+          "description": "Default language for AI-generated projects."
+        },
+        "restive-client.ai.outputDirectory": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Output directory for generated projects (leave empty to choose each time)."
+        },
+        "restive-client.ai.projectDescription": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Project description (leave empty to use defaults)."
+        },
+        "restive-client.ai.apiBasePath": {
+          "type": "string",
+          "default": "/api/v1",
+          "scope": "resource",
+          "description": "Base path for generated API routes."
+        },
+        "restive-client.ai.port": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 1,
+          "scope": "resource",
+          "description": "Port for the generated server."
+        },
+        "restive-client.ai.includeDocker": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Include Docker support in generated projects."
+        },
+        "restive-client.ai.includeTests": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Include test scaffolding in generated projects."
+        },
+        "restive-client.ai.includeApiExplorer": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Include Swagger UI in generated projects."
+        },
+        "restive-client.ai.nodeVersion": {
+          "type": "string",
+          "default": ">=18.0.0",
+          "scope": "resource",
+          "description": "Node.js version range for generated projects."
         }
       }
     },
