@@ -77,6 +77,19 @@ export interface OutputBinding {
 }
 
 /**
+ * A block of comment-only instructions attached to an operation.
+ * These are derived from @block ... @end comment sections.
+ */
+export interface CommentBlock {
+    /** Block name from @block directive */
+    name: string;
+    /** Lines inside the block with comment prefixes removed */
+    lines: string[];
+    /** Joined block content */
+    content: string;
+}
+
+/**
  * Metadata flags parsed from request comments.
  */
 export interface OperationMetadata {
@@ -139,6 +152,8 @@ export interface OperationIR {
     inputs: InputBinding[];
     /** Inferred return fields */
     outputs: OutputBinding[];
+    /** Comment-only instruction blocks for code generation */
+    commentBlocks?: CommentBlock[];
     /** Other operations referenced via {{other.response...}} */
     dependencies: string[];
     /** Request metadata flags */

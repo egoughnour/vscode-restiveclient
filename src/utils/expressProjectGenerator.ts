@@ -16,6 +16,7 @@ import { HttpFileIR, OperationIR } from './operationIR';
 import { OpenAPIGenerator, OpenAPIGeneratorOptions, OpenAPIDocument } from './openApiGenerator';
 import { ExpressGenerator, ExpressGeneratorOptions } from './expressGenerator';
 import * as yaml from 'js-yaml';
+import { AiServiceGenerationOptions, generateServiceBodies } from './aiServiceGenerator';
 
 // ============================================================================
 // Types
@@ -91,7 +92,7 @@ export class ExpressProjectGenerator {
     /**
      * Generate a complete Express project from HttpFileIR.
      */
-    generate(fileIR: HttpFileIR): GeneratedProject {
+    generate(fileIR: HttpFileIR, serviceBodies?: Record<string, string>): GeneratedProject {
         const files: GeneratedFile[] = [];
 
         // Generate OpenAPI spec
@@ -142,7 +143,7 @@ export class ExpressProjectGenerator {
         }
 
         // Services (implementation stubs)
-        files.push(this.generateServices(fileIR));
+        files.push(...this.generateServices(fileIR, serviceBodies));
 
         // Common utilities
         files.push(this.generateLogger());
@@ -602,8 +603,9 @@ export default app;
     // Services
     // ========================================================================
 
-    private generateServices(fileIR: HttpFileIR): GeneratedFile {
+    private generateServices(fileIR: HttpFileIR, serviceBodies?: Record<string, string>): GeneratedFile[] {
         const ext = this.options.typescript ? 'ts' : 'js';
+        const files: GeneratedFile[] = [];
         const lines: string[] = [];
 
         lines.push(`/**`);
@@ -632,32 +634,44 @@ export default app;
             lines.push(` * ${op.method} ${this.extractPath(op.urlTemplate)}`);
             lines.push(` */`);
             lines.push(`export async function ${op.name}Service(request${reqType})${retType} {`);
-            lines.push(`  // TODO: Implement business logic`);
 
-            if (op.outputs.length > 0) {
-                lines.push(`  return {`);
-                for (const output of op.outputs) {
-                    lines.push(`    ${output.name}: undefined, // TODO: implement`);
+            const generatedBody = this.formatGeneratedBody(serviceBodies?.[op.name]);
+            if (generatedBody) {
+                for (const line of generatedBody) {
+                    lines.push(`  ${line}`);
                 }
-                lines.push(`  };`);
             } else {
-                lines.push(`  return {`);
-                lines.push(`    status: 200,`);
-                lines.push(`    body: { message: 'Not implemented' },`);
-                lines.push(`  };`);
+                lines.push(`  // TODO: Implement business logic`);
+
+                if (op.outputs.length > 0) {
+                    lines.push(`  return {`);
+                    for (const output of op.outputs) {
+                        lines.push(`    ${output.name}: undefined, // TODO: implement`);
+                    }
+                    lines.push(`  };`);
+                } else {
+                    lines.push(`  return {`);
+                    lines.push(`    status: 200,`);
+                    lines.push(`    body: { message: 'Not implemented' },`);
+                    lines.push(`  };`);
+                }
             }
 
             lines.push(`}`);
             lines.push('');
+
+            files.push({
+                path: `server/services/${op.name}.${ext}`,
+                content: `export { ${op.name}Service } from './index';\n`,
+            });
         }
 
-        // Also create individual service files
-        const indexContent = lines.join('\n');
-
-        return {
+        files.unshift({
             path: `server/services/index.${ext}`,
-            content: indexContent,
-        };
+            content: lines.join('\n'),
+        });
+
+        return files;
     }
 
     private getResponseType(op: OperationIR): string {
@@ -666,6 +680,17 @@ export default app;
             return `{ ${fields} }`;
         }
         return `{ status?: number; body?: unknown }`;
+    }
+
+    private formatGeneratedBody(body: string | undefined): string[] | undefined {
+        if (!body) {
+            return undefined;
+        }
+        const trimmed = body.trim();
+        if (!trimmed) {
+            return undefined;
+        }
+        return trimmed.split(/\r?\n/);
     }
 
     // ========================================================================
@@ -1073,6 +1098,23 @@ export function generateExpressProject(
 }
 
 /**
+ * Generate a complete Express project using AI-generated service bodies.
+ */
+export async function generateExpressProjectWithAi(
+    fileIR: HttpFileIR,
+    options: ProjectGeneratorOptions,
+    aiOptions: AiServiceGenerationOptions
+): Promise<GeneratedProject> {
+    const generator = new ExpressProjectGenerator(options);
+    const language = options.typescript === false ? 'javascript' : 'typescript';
+    const serviceBodies = await generateServiceBodies(fileIR, {
+        ...aiOptions,
+        language,
+    });
+    return generator.generate(fileIR, serviceBodies);
+}
+
+/**
  * Generate project and write files to disk.
  */
 export async function generateAndWriteProject(
@@ -1088,6 +1130,31 @@ export async function generateAndWriteProject(
     // Write each file
     for (const file of project.files) {
         if (!file.path) continue; // Skip empty paths (like tsconfig when not using TS)
+
+        const fullPath = pathModule.join(outputDir, project.projectName, file.path);
+        await fs.ensureDir(pathModule.dirname(fullPath));
+        await fs.writeFile(fullPath, file.content);
+    }
+
+    return project;
+}
+
+/**
+ * Generate project with AI-generated service bodies and write files to disk.
+ */
+export async function generateAndWriteProjectWithAi(
+    fileIR: HttpFileIR,
+    options: ProjectGeneratorOptions,
+    aiOptions: AiServiceGenerationOptions,
+    outputDir: string
+): Promise<GeneratedProject> {
+    const fs = await import('fs-extra');
+    const pathModule = await import('path');
+
+    const project = await generateExpressProjectWithAi(fileIR, options, aiOptions);
+
+    for (const file of project.files) {
+        if (!file.path) continue;
 
         const fullPath = pathModule.join(outputDir, project.projectName, file.path);
         await fs.ensureDir(pathModule.dirname(fullPath));

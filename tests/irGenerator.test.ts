@@ -365,6 +365,29 @@ Content-Type: application/json
         });
     });
 
+    describe('comment block extraction', () => {
+        it('extracts @block sections from comments', async () => {
+            const content = `
+# @name createUser
+POST https://api.example.com/users
+Content-Type: application/json
+
+{"name": "Alice"}
+
+# @block createUser.service
+# Create a user and return the new id
+# Ensure validation errors are handled
+# @end
+`;
+            const result = await parseHttpFileToIR(content);
+            const blocks = result.operations[0].commentBlocks;
+            assert.ok(blocks);
+            assert.equal(blocks?.length, 1);
+            assert.equal(blocks?.[0].name, 'createUser.service');
+            assert.ok(blocks?.[0].content.includes('Create a user'));
+        });
+    });
+
     describe('patch rule extraction', () => {
         it('extracts JSON patch rules from header', async () => {
             const content = `

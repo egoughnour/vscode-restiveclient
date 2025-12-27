@@ -30,6 +30,8 @@ const FileVariableDefinitionRegex = /^\s*@([^\s=]+)\s*=\s*(.*?)\s*$/;
 const RequestVariableDefinitionRegex = /^\s*(?:#{1,}|\/{2,})\s+@name\s+(\w+)\s*$/m;
 const PromptCommentRegex = /^\s*(?:#{1,}|\/{2,})\s*@prompt\s+([^\s]+)(?:\s+(.*))?\s*$/;
 const BlockDelimiterRegex = /^#{3,}/;
+const CommentBlockStartRegex = /^\s*(?:#|\/{2})\s*@block\s+(.+?)\s*$/;
+const CommentBlockEndRegex = /^\s*(?:#|\/{2})\s*@end\s*$/;
 
 // Variable pattern matching
 const VariableReferenceRegex = /\{{2}([^{}]+)\}{2}/g;
@@ -217,6 +219,7 @@ export class IRGenerator {
         let state = ParseState.URL;
         let foundRequest = false;
         let bodyStarted = false;
+        let insideCommentBlock = false;
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
@@ -258,6 +261,22 @@ export class IRGenerator {
                     break;
 
                 case ParseState.Body:
+                    if (CommentBlockStartRegex.test(line)) {
+                        insideCommentBlock = true;
+                        postLines.push(line);
+                        continue;
+                    }
+                    if (insideCommentBlock) {
+                        postLines.push(line);
+                        if (CommentBlockEndRegex.test(line)) {
+                            insideCommentBlock = false;
+                        }
+                        continue;
+                    }
+                    if (CommentBlockEndRegex.test(line)) {
+                        postLines.push(line);
+                        continue;
+                    }
                     if (!bodyStarted && trimmed === '') {
                         // Skip leading empty lines after headers
                         continue;
@@ -322,6 +341,8 @@ export class IRGenerator {
         const allBlockLines = [...parsed.preLines, ...parsed.bodyLines, ...parsed.postLines];
         const outputs = this.extractOutputs(allBlockLines, metadata.name);
 
+        const commentBlocks = this.extractCommentBlocks(parsed.rawText.split(LineSplitterRegex));
+
         // Find dependencies (other operations referenced)
         const dependencies = this.extractDependencies(url, headers, body, jsonRules, xmlRules);
 
@@ -333,6 +354,7 @@ export class IRGenerator {
             body,
             inputs,
             outputs,
+            commentBlocks: commentBlocks.length > 0 ? commentBlocks : undefined,
             dependencies,
             metadata: metadata.operationMetadata,
             rawText: parsed.rawText,
@@ -654,6 +676,56 @@ export class IRGenerator {
     }
 
     /**
+     * Extract comment-only instruction blocks from a request block.
+     * Uses @block <name> ... @end markers in comment lines.
+     */
+    private extractCommentBlocks(lines: string[]): Array<{ name: string; lines: string[]; content: string }> {
+        const blocks: Array<{ name: string; lines: string[]; content: string }> = [];
+        let current: { name: string; lines: string[] } | null = null;
+
+        for (const line of lines) {
+            const startMatch = CommentBlockStartRegex.exec(line);
+            if (startMatch) {
+                if (current) {
+                    blocks.push({
+                        name: current.name,
+                        lines: current.lines,
+                        content: current.lines.join(EOL),
+                    });
+                }
+                current = { name: startMatch[1].trim(), lines: [] };
+                continue;
+            }
+
+            if (CommentBlockEndRegex.test(line)) {
+                if (current) {
+                    blocks.push({
+                        name: current.name,
+                        lines: current.lines,
+                        content: current.lines.join(EOL),
+                    });
+                }
+                current = null;
+                continue;
+            }
+
+            if (current) {
+                current.lines.push(this.stripCommentPrefix(line));
+            }
+        }
+
+        if (current) {
+            blocks.push({
+                name: current.name,
+                lines: current.lines,
+                content: current.lines.join(EOL),
+            });
+        }
+
+        return blocks;
+    }
+
+    /**
      * Extract dependencies (other operations referenced via {{other.response...}}).
      */
     private extractDependencies(
@@ -854,6 +926,14 @@ export class IRGenerator {
      */
     private isCommentLine(line: string): boolean {
         return CommentIdentifiersRegex.test(line);
+    }
+
+    /**
+     * Remove comment prefix from a line while preserving the remainder.
+     */
+    private stripCommentPrefix(line: string): string {
+        const match = /^\s*(#|\/{2})\s?(.*)$/.exec(line);
+        return match ? match[2] : line;
     }
 
     /**
