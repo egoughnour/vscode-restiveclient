@@ -10,7 +10,6 @@ import * as yaml from 'js-yaml';
 import {
     OperationIR,
     HttpFileIR,
-    InputBinding,
     BodySpec,
     PatchRule,
 } from './operationIR';
@@ -138,7 +137,6 @@ export interface OpenAPIGeneratorOptions {
 export class OpenAPIGenerator {
     private readonly options: Required<OpenAPIGeneratorOptions>;
     private schemas: Record<string, OpenAPISchema> = {};
-    private schemaCounter = 0;
 
     constructor(options: OpenAPIGeneratorOptions = {}) {
         this.options = {
@@ -158,7 +156,6 @@ export class OpenAPIGenerator {
      */
     generate(fileIR: HttpFileIR): OpenAPIDocument {
         this.schemas = {};
-        this.schemaCounter = 0;
 
         const paths: Record<string, OpenAPIPathItem> = {};
         const servers: OpenAPIServer[] = [];

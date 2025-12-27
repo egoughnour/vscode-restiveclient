@@ -13,7 +13,6 @@ import {
     HttpFileIR,
     BodySpec,
     BodyStage,
-    PatchRule,
     InputBinding,
     InputBindingSource,
     OutputBinding,
@@ -453,7 +452,7 @@ export class IRGenerator {
         if (fileMatch?.groups) {
             const indicator = fileMatch.groups.indicator;
             const filepath = fileMatch.groups.filepath.trim();
-            const { templateOrder, pipeline } = this.parseIndicator(indicator, jsonRules, xmlRules);
+            const { pipeline } = this.parseIndicator(indicator, jsonRules, xmlRules);
 
             let rawBodyTemplate: string | undefined;
             if (this.options.loadFileContents) {
@@ -511,8 +510,6 @@ export class IRGenerator {
         }
 
         const before = indicator.slice(0, atIndex);
-        const after = indicator.slice(atIndex + 1);
-
         // Pattern: j@ or x@ means patch before template
         if (before === 'j' || before === 'x') {
             const pipeline: BodyStage[] = [];

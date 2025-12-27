@@ -13,7 +13,7 @@
   - TypeScript and JavaScript modes
 * __Feature__: Add non-AI Express project generator command
 * __Improvement__: Complete `.http` → IR → OpenAPI → Express project pipeline
-* __Improvement__: 370 tests passing across all generator modules
+* __Improvement__: 379 tests passing across all generator modules
 
 ## 0.30.0 (2024/12/23)
 * __Feature__: Multi-language code snippet parameterization - generate code snippets wrapped in method/function signatures with parameterized URLs and headers

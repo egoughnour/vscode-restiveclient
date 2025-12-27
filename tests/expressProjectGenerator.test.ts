@@ -178,6 +178,13 @@ describe('Package.json generation', () => {
         assert.ok(pkg.dependencies.dotenv, 'dotenv should be included');
     });
 
+    it('should include pino-pretty in devDependencies', () => {
+        const project = generateExpressProject(createTestFileIR(), createDefaultOptions());
+        const pkg = JSON.parse(findFile(project, 'package.json')!);
+
+        assert.ok(pkg.devDependencies['pino-pretty'], 'pino-pretty should be included');
+    });
+
     it('should include TypeScript dev dependencies when typescript enabled', () => {
         const project = generateExpressProject(createTestFileIR(), createDefaultOptions({ typescript: true }));
         const pkg = JSON.parse(findFile(project, 'package.json')!);
@@ -329,6 +336,13 @@ describe('Express app generation', () => {
 
         assert.ok(app?.includes('swagger-ui-express'), 'should include swagger-ui-express');
         assert.ok(app?.includes('/api-explorer'), 'should include /api-explorer route');
+    });
+
+    it('should load OpenAPI spec from cwd when API explorer enabled', () => {
+        const project = generateExpressProject(createTestFileIR(), createDefaultOptions({ includeApiExplorer: true }));
+        const app = findFile(project, 'server/app.ts');
+
+        assert.ok(app?.includes('process.cwd()'), 'should resolve api.yaml from cwd');
     });
 
     it('should mount routes at correct base path', () => {
@@ -554,6 +568,13 @@ describe('OpenAPI validator generation', () => {
         assert.ok(validator?.includes('OpenApiValidator.middleware'), 'should use middleware');
         assert.ok(validator?.includes('validateRequests: true'), 'should validate requests');
     });
+
+    it('should resolve api.yaml from cwd', () => {
+        const project = generateExpressProject(createTestFileIR(), createDefaultOptions());
+        const validator = findFile(project, 'server/common/openApiValidator.ts');
+
+        assert.ok(validator?.includes('process.cwd()'), 'should resolve api.yaml from cwd');
+    });
 });
 
 // ============================================================================
@@ -604,6 +625,23 @@ describe('Docker files generation', () => {
         const dockerfile = findFile(project, 'Dockerfile');
 
         assert.ok(dockerfile?.includes('RUN npm run build'), 'should include build step');
+    });
+
+    it('should prune dev dependencies in TypeScript Dockerfile', () => {
+        const project = generateExpressProject(createTestFileIR(), createDefaultOptions({ typescript: true, includeDocker: true }));
+        const dockerfile = findFile(project, 'Dockerfile');
+
+        assert.ok(dockerfile?.includes('RUN npm ci'), 'should install dependencies');
+        assert.ok(dockerfile?.includes('npm prune --omit=dev'), 'should prune dev dependencies');
+        assert.ok(!dockerfile?.includes('npm ci --omit=dev'), 'should not use omit=dev for TypeScript build');
+    });
+
+    it('should omit dev dependencies in JavaScript Dockerfile', () => {
+        const project = generateExpressProject(createTestFileIR(), createDefaultOptions({ typescript: false, includeDocker: true }));
+        const dockerfile = findFile(project, 'Dockerfile');
+
+        assert.ok(dockerfile?.includes('npm ci --omit=dev'), 'should install production dependencies only');
+        assert.ok(!dockerfile?.includes('npm prune --omit=dev'), 'should not prune dev dependencies');
     });
 
     it('should generate docker-compose.yml', () => {
@@ -662,11 +700,34 @@ describe('Test files generation', () => {
         assert.ok(test?.includes("import request from 'supertest'"), 'should import supertest');
     });
 
+    it('should generate jest.config.js when tests enabled', () => {
+        const project = generateExpressProject(createTestFileIR(), createDefaultOptions({ includeTests: true }));
+        const jestConfig = findFile(project, 'jest.config.js');
+
+        assert.ok(jestConfig, 'jest.config.js should exist');
+        assert.ok(jestConfig?.includes('ts-jest'), 'should include ts-jest preset');
+    });
+
+    it('should generate JavaScript jest.config.js in JS mode', () => {
+        const project = generateExpressProject(createTestFileIR(), createDefaultOptions({ typescript: false, includeTests: true }));
+        const jestConfig = findFile(project, 'jest.config.js');
+
+        assert.ok(jestConfig?.includes('*.test.js'), 'should match js tests');
+        assert.ok(!jestConfig?.includes('ts-jest'), 'should not include ts-jest');
+    });
+
     it('should not generate test files when disabled', () => {
         const project = generateExpressProject(createTestFileIR(), createDefaultOptions({ includeTests: false }));
         const testFiles = project.files.filter(f => f.path.includes('__tests__'));
 
         assert.equal(testFiles.length, 0, 'should have no test files');
+    });
+
+    it('should not generate jest.config.js when tests disabled', () => {
+        const project = generateExpressProject(createTestFileIR(), createDefaultOptions({ includeTests: false }));
+        const jestConfig = findFile(project, 'jest.config.js');
+
+        assert.equal(jestConfig, undefined, 'jest.config.js should not exist');
     });
 });
 
@@ -785,6 +846,25 @@ describe('JavaScript mode', () => {
         assert.ok(!controller?.includes(': Request'), 'should not include Request type');
         assert.ok(!controller?.includes(': Response'), 'should not include Response type');
         assert.ok(!controller?.includes('interface'), 'should not include interface');
+    });
+
+    it('should use CommonJS exports in JS mode', () => {
+        const project = generateExpressProject(createTestFileIR(), createDefaultOptions({ typescript: false }));
+        const app = findFile(project, 'server/app.js');
+        const routes = findFile(project, 'server/routes/index.js');
+        const controller = findFile(project, 'server/controllers/getUser.js');
+        const service = findFile(project, 'server/services/getUser.js');
+        const logger = findFile(project, 'server/common/logger.js');
+        const validator = findFile(project, 'server/common/openApiValidator.js');
+        const errorHandler = findFile(project, 'server/common/errorHandler.js');
+
+        assert.ok(app?.includes('module.exports'), 'app should use module.exports');
+        assert.ok(routes?.includes('module.exports'), 'routes should use module.exports');
+        assert.ok(controller?.includes('module.exports'), 'controller should use module.exports');
+        assert.ok(service?.includes('module.exports'), 'service should use module.exports');
+        assert.ok(logger?.includes('module.exports'), 'logger should use module.exports');
+        assert.ok(validator?.includes('module.exports'), 'validator should use module.exports');
+        assert.ok(errorHandler?.includes('module.exports'), 'error handler should use module.exports');
     });
 });
 

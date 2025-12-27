@@ -8,8 +8,6 @@
 import {
     OperationIR,
     HttpFileIR,
-    InputBinding,
-    OutputBinding,
     BodySpec,
 } from './operationIR';
 
@@ -398,7 +396,6 @@ export class ExpressGenerator {
      */
     private generateHandler(op: OperationIR): string {
         const lines: string[] = [];
-        const pascalName = this.toPascalCase(op.name);
         const ts = this.options.typescript;
         const async = this.options.asyncHandlers;
 

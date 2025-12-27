@@ -9,8 +9,6 @@
  * - Optional TypeSpec generation
  */
 
-import { TemplateOrder } from './bodyPatchPipeline';
-
 /**
  * A patch rule parsed from X-RestiveClient-JsonPatch or X-RestiveClient-XmlPatch headers.
  */

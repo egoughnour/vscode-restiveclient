@@ -11,9 +11,8 @@
  * This provides a complete pipeline: .http → IR → OpenAPI + Express → Running Server
  */
 
-import * as path from 'path';
 import { HttpFileIR, OperationIR } from './operationIR';
-import { OpenAPIGenerator, OpenAPIGeneratorOptions, OpenAPIDocument } from './openApiGenerator';
+import { OpenAPIGenerator, OpenAPIGeneratorOptions } from './openApiGenerator';
 import { ExpressGenerator, ExpressGeneratorOptions } from './expressGenerator';
 import * as yaml from 'js-yaml';
 import { AiServiceGenerationOptions, generateServiceBodies } from './aiServiceGenerator';
@@ -185,7 +184,6 @@ export class ExpressProjectGenerator {
     // ========================================================================
 
     private generatePackageJson(): GeneratedFile {
-        const ext = this.options.typescript ? 'ts' : 'js';
         const pkg = {
             name: this.options.projectName,
             version: this.options.version,
@@ -531,7 +529,6 @@ module.exports = app;
 
     private generateController(op: OperationIR): GeneratedFile {
         const ext = this.options.typescript ? 'ts' : 'js';
-        const pascalName = this.toPascalCase(op.name);
         const lines: string[] = [];
 
         if (this.options.typescript) {

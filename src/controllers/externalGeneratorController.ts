@@ -167,7 +167,11 @@ export class ExternalGeneratorController {
     private readSettings(uri: Uri): GeneratorSettings {
         const config = workspace.getConfiguration('restive-client', uri);
         return {
-            defaultLanguage: this.getConfigValue(config, 'externalGenerator.defaultLanguage', 'typescript').value,
+            defaultLanguage: this.getConfigValue<LanguageOption>(
+                config,
+                'externalGenerator.defaultLanguage',
+                'typescript'
+            ).value,
             useYarn: this.getConfigValue(config, 'externalGenerator.useYarn', false).value,
             includeDocker: this.getConfigValue(config, 'externalGenerator.includeDocker', false).value,
             yoCommand: this.getConfigValue(config, 'externalGenerator.yoCommand', 'yo').value,
