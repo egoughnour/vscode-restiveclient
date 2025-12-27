@@ -185,6 +185,11 @@
         "category": "Restive Client"
       },
       {
+        "command": "restive-client.generate-express-project",
+        "title": "Generate Express Project",
+        "category": "Restive Client"
+      },
+      {
         "command": "restive-client.generate-express-project-external",
         "title": "Generate Express Project (External Generator)",
         "category": "Restive Client"
@@ -762,6 +767,65 @@
           "scope": "resource",
           "description": "Generator name for the TypeScript variant."
         },
+        "restive-client.projectGenerator.defaultLanguage": {
+          "type": "string",
+          "enum": [
+            "typescript",
+            "javascript"
+          ],
+          "default": "typescript",
+          "scope": "resource",
+          "description": "Default language for internal Express project generation."
+        },
+        "restive-client.projectGenerator.outputDirectory": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Output directory for generated projects (leave empty to choose each time)."
+        },
+        "restive-client.projectGenerator.projectDescription": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Project description (leave empty to use defaults)."
+        },
+        "restive-client.projectGenerator.apiBasePath": {
+          "type": "string",
+          "default": "/api/v1",
+          "scope": "resource",
+          "description": "Base path for generated API routes."
+        },
+        "restive-client.projectGenerator.port": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 1,
+          "scope": "resource",
+          "description": "Port for the generated server."
+        },
+        "restive-client.projectGenerator.includeDocker": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Include Docker support in generated projects."
+        },
+        "restive-client.projectGenerator.includeTests": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Include test scaffolding in generated projects."
+        },
+        "restive-client.projectGenerator.includeApiExplorer": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Include Swagger UI in generated projects."
+        },
+        "restive-client.projectGenerator.nodeVersion": {
+          "type": "string",
+          "default": ">=18.0.0",
+          "scope": "resource",
+          "description": "Node.js version range for generated projects."
+        },
         "restive-client.ai.provider": {
           "type": "string",
           "enum": [
@@ -943,6 +1007,7 @@
     "iconv-lite": "^0.4.15",
     "jsonc-parser": "^2.0.2",
     "jsonpath-plus": "^10.1.0",
+    "js-yaml": "^3.13.1",
     "mime-types": "^2.1.14",
     "node-fetch": "^2.6.7",
     "node-jws": "^0.1.4",

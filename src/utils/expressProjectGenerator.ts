@@ -161,6 +161,7 @@ export class ExpressProjectGenerator {
 
         // Optional: Tests
         if (this.options.includeTests) {
+            files.push(this.generateJestConfig());
             files.push(this.generateTestSetup());
             for (const op of fileIR.operations) {
                 files.push(this.generateTest(op));
@@ -237,6 +238,7 @@ export class ExpressProjectGenerator {
                     'nodemon': '^3.0.2',
                 }),
                 'eslint': '^8.55.0',
+                'pino-pretty': '^10.3.0',
                 ...(this.options.includeTests ? {
                     'jest': '^29.7.0',
                     'supertest': '^6.3.3',
@@ -336,9 +338,22 @@ LOG_LEVEL=info
 
     private generateServerIndex(): GeneratedFile {
         const ext = this.options.typescript ? 'ts' : 'js';
-        const content = `import 'dotenv/config';
+        const content = this.options.typescript
+            ? `import 'dotenv/config';
 import app from './app';
 import logger from './common/logger';
+
+const port = process.env.PORT || ${this.options.port};
+
+app.listen(port, () => {
+  logger.info(\`Server started on port \${port}\`);
+  logger.info(\`API available at http://localhost:\${port}${this.options.apiBasePath}\`);
+  ${this.options.includeApiExplorer ? `logger.info(\`API Explorer available at http://localhost:\${port}/api-explorer\`);` : ''}
+});
+`
+            : `require('dotenv').config();
+const app = require('./app');
+const logger = require('./common/logger');
 
 const port = process.env.PORT || ${this.options.port};
 
@@ -361,7 +376,8 @@ app.listen(port, () => {
 
     private generateApp(fileIR: HttpFileIR): GeneratedFile {
         const ext = this.options.typescript ? 'ts' : 'js';
-        const content = `import express${this.options.typescript ? ', { Application }' : ''} from 'express';
+        const content = this.options.typescript
+            ? `import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import pinoHttp from 'pino-http';
@@ -373,7 +389,7 @@ import { openApiValidator } from './common/openApiValidator';
 import { errorHandler } from './common/errorHandler';
 import routes from './routes';
 
-const app${this.options.typescript ? ': Application' : ''} = express();
+const app: Application = express();
 
 // Security middleware
 app.use(helmet());
@@ -387,7 +403,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(pinoHttp({ logger }));
 
 ${this.options.includeApiExplorer ? `// API Explorer (Swagger UI)
-const apiSpec = YAML.load(path.join(__dirname, 'common/api.yaml'));
+const apiSpecPath = path.resolve(process.cwd(), 'server/common/api.yaml');
+const apiSpec = YAML.load(apiSpecPath);
 app.use('/api-explorer', swaggerUi.serve, swaggerUi.setup(apiSpec));
 app.get('/api-spec', (req, res) => res.json(apiSpec));
 ` : ''}
@@ -407,6 +424,54 @@ app.get('/health', (req, res) => {
 app.use(errorHandler);
 
 export default app;
+`
+            : `const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const pinoHttp = require('pino-http');
+${this.options.includeApiExplorer ? `const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
+const path = require('path');` : ''}
+const logger = require('./common/logger');
+const { openApiValidator } = require('./common/openApiValidator');
+const { errorHandler } = require('./common/errorHandler');
+const routes = require('./routes');
+
+const app = express();
+
+// Security middleware
+app.use(helmet());
+app.use(cors());
+
+// Body parsing
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Request logging
+app.use(pinoHttp({ logger }));
+
+${this.options.includeApiExplorer ? `// API Explorer (Swagger UI)
+const apiSpecPath = path.resolve(process.cwd(), 'server/common/api.yaml');
+const apiSpec = YAML.load(apiSpecPath);
+app.use('/api-explorer', swaggerUi.serve, swaggerUi.setup(apiSpec));
+app.get('/api-spec', (req, res) => res.json(apiSpec));
+` : ''}
+
+// OpenAPI validation
+app.use(openApiValidator);
+
+// API routes
+app.use('${this.options.apiBasePath}', routes);
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Error handling
+app.use(errorHandler);
+
+module.exports = app;
 `;
 
         return {
@@ -423,11 +488,16 @@ export default app;
         const ext = this.options.typescript ? 'ts' : 'js';
         const lines: string[] = [];
 
-        lines.push(`import { Router } from 'express';`);
-
-        // Import controllers
-        for (const op of fileIR.operations) {
-            lines.push(`import { ${op.name}Controller } from './controllers/${op.name}';`);
+        if (this.options.typescript) {
+            lines.push(`import { Router } from 'express';`);
+            for (const op of fileIR.operations) {
+                lines.push(`import { ${op.name}Controller } from './controllers/${op.name}';`);
+            }
+        } else {
+            lines.push(`const { Router } = require('express');`);
+            for (const op of fileIR.operations) {
+                lines.push(`const { ${op.name}Controller } = require('./controllers/${op.name}');`);
+            }
         }
 
         lines.push('');
@@ -443,7 +513,11 @@ export default app;
             lines.push('');
         }
 
-        lines.push('export default router;');
+        if (this.options.typescript) {
+            lines.push('export default router;');
+        } else {
+            lines.push('module.exports = router;');
+        }
 
         return {
             path: `server/routes/index.${ext}`,
@@ -462,9 +536,12 @@ export default app;
 
         if (this.options.typescript) {
             lines.push(`import { Request, Response, NextFunction } from 'express';`);
+            lines.push(`import { ${op.name}Service } from '../services/${op.name}';`);
+            lines.push(`import logger from '../common/logger';`);
+        } else {
+            lines.push(`const { ${op.name}Service } = require('../services/${op.name}');`);
+            lines.push(`const logger = require('../common/logger');`);
         }
-        lines.push(`import { ${op.name}Service } from '../services/${op.name}';`);
-        lines.push(`import logger from '../common/logger';`);
         lines.push('');
 
         // Generate request/response types
@@ -482,7 +559,8 @@ export default app;
         lines.push(` * ${op.method} ${this.extractPath(op.urlTemplate)}`);
         lines.push(` * Controller for ${op.name}`);
         lines.push(` */`);
-        lines.push(`export async function ${op.name}Controller(req${reqType}, res${resType}, next${nextType}) {`);
+        const exportPrefix = this.options.typescript ? 'export ' : '';
+        lines.push(`${exportPrefix}async function ${op.name}Controller(req${reqType}, res${resType}, next${nextType}) {`);
         lines.push(`  try {`);
         lines.push(`    logger.info({ operation: '${op.name}' }, 'Processing request');`);
         lines.push('');
@@ -510,6 +588,11 @@ export default app;
         lines.push(`    next(error);`);
         lines.push(`  }`);
         lines.push(`}`);
+
+        if (!this.options.typescript) {
+            lines.push('');
+            lines.push(`module.exports = { ${op.name}Controller };`);
+        }
 
         return {
             path: `server/controllers/${op.name}.${ext}`,
@@ -628,12 +711,13 @@ export default app;
             const pascalName = this.toPascalCase(op.name);
             const reqType = this.options.typescript ? `: ${pascalName}Request` : '';
             const retType = this.options.typescript ? `: Promise<${this.getResponseType(op)}>` : '';
+            const exportPrefix = this.options.typescript ? 'export ' : '';
 
             lines.push(`/**`);
             lines.push(` * Service for ${op.name}`);
             lines.push(` * ${op.method} ${this.extractPath(op.urlTemplate)}`);
             lines.push(` */`);
-            lines.push(`export async function ${op.name}Service(request${reqType})${retType} {`);
+            lines.push(`${exportPrefix}async function ${op.name}Service(request${reqType})${retType} {`);
 
             const generatedBody = this.formatGeneratedBody(serviceBodies?.[op.name]);
             if (generatedBody) {
@@ -658,11 +742,17 @@ export default app;
             }
 
             lines.push(`}`);
+
+            if (!this.options.typescript) {
+                lines.push(`exports.${op.name}Service = ${op.name}Service;`);
+            }
             lines.push('');
 
             files.push({
                 path: `server/services/${op.name}.${ext}`,
-                content: `export { ${op.name}Service } from './index';\n`,
+                content: this.options.typescript
+                    ? `export { ${op.name}Service } from './index';\n`
+                    : `const { ${op.name}Service } = require('./index');\n\nmodule.exports = { ${op.name}Service };\n`,
             });
         }
 
@@ -701,7 +791,8 @@ export default app;
         const ext = this.options.typescript ? 'ts' : 'js';
         return {
             path: `server/common/logger.${ext}`,
-            content: `import pino from 'pino';
+            content: this.options.typescript
+                ? `import pino from 'pino';
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -714,6 +805,20 @@ const logger = pino({
 });
 
 export default logger;
+`
+                : `const pino = require('pino');
+
+const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  transport: process.env.NODE_ENV === 'development' ? {
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+    },
+  } : undefined,
+});
+
+module.exports = logger;
 `,
         };
     }
@@ -727,7 +832,9 @@ export default logger;
 
         return {
             path: `server/common/errorHandler.${ext}`,
-            content: `${this.options.typescript ? `import { Request, Response, NextFunction } from 'express';\n` : ''}import logger from './logger';
+            content: this.options.typescript
+                ? `import { Request, Response, NextFunction } from 'express';
+import logger from './logger';
 
 export function errorHandler(err${errType}, req${reqType}, res${resType}, next${nextType}) {
   logger.error({ err }, 'Unhandled error');
@@ -751,6 +858,33 @@ export function errorHandler(err${errType}, req${reqType}, res${resType}, next${
     },
   });
 }
+`
+                : `const logger = require('./logger');
+
+function errorHandler(err${errType}, req${reqType}, res${resType}, next${nextType}) {
+  logger.error({ err }, 'Unhandled error');
+
+  // OpenAPI validation errors
+  if (err && typeof err === 'object' && 'status' in err) {
+    const error = err;
+    return res.status(error.status).json({
+      error: {
+        message: error.message,
+        errors: error.errors,
+      },
+    });
+  }
+
+  // Generic errors
+  const message = err instanceof Error ? err.message : 'Internal server error';
+  res.status(500).json({
+    error: {
+      message,
+    },
+  });
+}
+
+module.exports = { errorHandler };
 `,
         };
     }
@@ -759,14 +893,30 @@ export function errorHandler(err${errType}, req${reqType}, res${resType}, next${
         const ext = this.options.typescript ? 'ts' : 'js';
         return {
             path: `server/common/openApiValidator.${ext}`,
-            content: `import * as OpenApiValidator from 'express-openapi-validator';
+            content: this.options.typescript
+                ? `import * as OpenApiValidator from 'express-openapi-validator';
 import path from 'path';
 
+const apiSpecPath = path.resolve(process.cwd(), 'server/common/api.yaml');
+
 export const openApiValidator = OpenApiValidator.middleware({
-  apiSpec: path.join(__dirname, 'api.yaml'),
+  apiSpec: apiSpecPath,
   validateRequests: true,
   validateResponses: process.env.OPENAPI_ENABLE_RESPONSE_VALIDATION === 'true',
 });
+`
+                : `const OpenApiValidator = require('express-openapi-validator');
+const path = require('path');
+
+const apiSpecPath = path.resolve(process.cwd(), 'server/common/api.yaml');
+
+const openApiValidator = OpenApiValidator.middleware({
+  apiSpec: apiSpecPath,
+  validateRequests: true,
+  validateResponses: process.env.OPENAPI_ENABLE_RESPONSE_VALIDATION === 'true',
+});
+
+module.exports = { openApiValidator };
 `,
         };
     }
@@ -776,6 +926,13 @@ export const openApiValidator = OpenApiValidator.middleware({
     // ========================================================================
 
     private generateDockerfile(): GeneratedFile {
+        const installStep = this.options.typescript
+            ? 'RUN npm ci'
+            : 'RUN npm ci --omit=dev';
+        const pruneStep = this.options.typescript
+            ? 'RUN npm prune --omit=dev\n\n'
+            : '';
+
         return {
             path: 'Dockerfile',
             content: `FROM node:20-alpine
@@ -784,15 +941,14 @@ WORKDIR /app
 
 # Install dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+${installStep}
 
 # Copy source
 COPY . .
 
 ${this.options.typescript ? `# Build TypeScript
 RUN npm run build
-
-` : ''}# Expose port
+${pruneStep}` : ''}# Expose port
 EXPOSE ${this.options.port}
 
 # Start server
@@ -839,11 +995,32 @@ README.md
     // Tests
     // ========================================================================
 
+    private generateJestConfig(): GeneratedFile {
+        const content = this.options.typescript
+            ? `module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  testMatch: ['**/*.test.ts'],
+};
+`
+            : `module.exports = {
+  testEnvironment: 'node',
+  testMatch: ['**/*.test.js'],
+};
+`;
+
+        return {
+            path: 'jest.config.js',
+            content,
+        };
+    }
+
     private generateTestSetup(): GeneratedFile {
         const ext = this.options.typescript ? 'ts' : 'js';
         return {
             path: `server/__tests__/setup.${ext}`,
-            content: `import app from '../app';
+            content: this.options.typescript
+                ? `import app from '../app';
 
 export { app };
 
@@ -856,6 +1033,20 @@ export async function request(method: string, path: string, body?: unknown) {
   }
   return req;
 }
+`
+                : `const app = require('../app');
+
+// Test utilities
+async function request(method, path, body) {
+  const supertest = require('supertest');
+  const req = supertest(app)[method.toLowerCase()](path);
+  if (body) {
+    req.send(body);
+  }
+  return req;
+}
+
+module.exports = { app, request };
 `,
         };
     }
@@ -867,8 +1058,28 @@ export async function request(method: string, path: string, body?: unknown) {
 
         return {
             path: `server/__tests__/${op.name}.test.${ext}`,
-            content: `import request from 'supertest';
+            content: this.options.typescript
+                ? `import request from 'supertest';
 import app from '../app';
+
+describe('${op.name}', () => {
+  describe('${op.method} ${path}', () => {
+    it('should return a response', async () => {
+      const response = await request(app)
+        .${op.method.toLowerCase()}('${fullPath.replace(/:\w+/g, 'test')}')
+        ${op.body.kind !== 'none' ? `.send({})` : ''}
+        .expect('Content-Type', /json/);
+
+      // TODO: Add specific assertions
+      expect(response.status).toBeDefined();
+    });
+
+    // TODO: Add more test cases
+  });
+});
+`
+                : `const request = require('supertest');
+const app = require('../app');
 
 describe('${op.name}', () => {
   describe('${op.method} ${path}', () => {
@@ -932,6 +1143,9 @@ coverage/
         const operations = fileIR.operations
             .map(op => `- \`${op.method} ${this.extractPath(op.urlTemplate)}\` - ${op.name}`)
             .join('\n');
+        const ext = this.options.typescript ? 'ts' : 'js';
+        const packageLine = this.options.typescript ? '├── package.json' : '└── package.json';
+        const tsconfigLine = this.options.typescript ? '\n└── tsconfig.json' : '';
 
         return {
             path: 'README.md',
@@ -992,16 +1206,15 @@ ${operations}
 ├── server/
 │   ├── common/
 │   │   ├── api.yaml        # OpenAPI specification
-│   │   ├── logger.ts       # Pino logger
-│   │   ├── errorHandler.ts # Error handling middleware
-│   │   └── openApiValidator.ts
+│   │   ├── logger.${ext}       # Pino logger
+│   │   ├── errorHandler.${ext} # Error handling middleware
+│   │   └── openApiValidator.${ext}
 │   ├── controllers/        # Route handlers
 │   ├── routes/             # Route definitions
 │   ├── services/           # Business logic
-│   ├── app.ts              # Express app setup
-│   └── index.ts            # Server entry point
-├── package.json
-└── tsconfig.json
+│   ├── app.${ext}              # Express app setup
+│   └── index.${ext}            # Server entry point
+${packageLine}${tsconfigLine}
 \`\`\`
 
 ## Generated with Restive Client

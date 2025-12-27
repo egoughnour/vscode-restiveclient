@@ -9,6 +9,7 @@ import { RequestController } from './controllers/requestController';
 import { SwaggerController } from './controllers/swaggerController';
 import { ExternalGeneratorController } from './controllers/externalGeneratorController';
 import { AiProjectGeneratorController } from './controllers/aiProjectGeneratorController';
+import { ExpressProjectGeneratorController } from './controllers/expressProjectGeneratorController';
 import { CustomVariableDiagnosticsProvider } from "./providers/customVariableDiagnosticsProvider";
 import { RequestBodyDocumentLinkProvider } from './providers/documentLinkProvider';
 import { EnvironmentOrFileVariableHoverProvider } from './providers/environmentOrFileVariableHoverProvider';
@@ -38,6 +39,7 @@ export async function activate(context: ExtensionContext) {
     const swaggerController = new SwaggerController(context);
     const externalGeneratorController = new ExternalGeneratorController();
     const aiProjectGeneratorController = new AiProjectGeneratorController();
+    const expressProjectGeneratorController = new ExpressProjectGeneratorController();
     context.subscriptions.push(requestController);
     context.subscriptions.push(historyController);
     context.subscriptions.push(codeSnippetController);
@@ -58,6 +60,7 @@ export async function activate(context: ExtensionContext) {
         });
     }));
     context.subscriptions.push(commands.registerCommand('restive-client.import-swagger', async () => swaggerController.import()));
+    context.subscriptions.push(commands.registerCommand('restive-client.generate-express-project', () => expressProjectGeneratorController.run()));
     context.subscriptions.push(commands.registerCommand('restive-client.generate-express-project-external', () => externalGeneratorController.run()));
     context.subscriptions.push(commands.registerCommand('restive-client.generate-express-project-ai', () => aiProjectGeneratorController.run()));
 
