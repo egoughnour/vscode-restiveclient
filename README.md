@@ -184,8 +184,8 @@ This fork builds on the excellent work of the original [REST Client](https://git
 
 ## Main Features
 * Pre-request modification of non-templated files (_i.e._, __file__ custom variables), including updates via:
-    - JSONPath (_under testing_)  
-    - XPath (_current_)
+    - JSONPath
+    - XPath
 * Send/Cancel/Rerun __HTTP request__ in editor and view response in a separate pane with syntax highlight
 * Send __GraphQL query__ and author __GraphQL variables__ in editor
 * Send __cURL command__ in editor and copy HTTP request as `cURL command`
