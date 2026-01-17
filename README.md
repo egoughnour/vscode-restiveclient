@@ -13,20 +13,17 @@ This fork of [REST Client](https://github.com/Huachao/vscode-restclient) adds se
 
 ### Pre-Request Body Patching
 
-The original REST Client requires request bodies to be fully templated inline. This fork adds support for **patching external files** before they're sent as request bodies—useful when working with large JSON/XML payloads that shouldn't be templated.
-
+The original REST Client requires request bodies to be fully templated inline. This fork adds support for **patching external files** before they're sent as request bodies—useful when working with large JSON/XML payloads that shouldn't be templated. See [Body Patching](#body-patching) and following sections for more details.
+ 
 #### JSONPath Patching
 
 Update specific values in JSON files before sending:
-
+The magic happens in the Custom Header.
 ```http
 ### Create user with dynamic data
-# @file ./payloads/user-template.json
-# @patch $.user.email {{$guid}}@example.com
-# @patch $.user.timestamp {{$timestamp}}
-# @patch $.metadata.requestId {{$randomInt 1000 9999}}
 POST https://api.example.com/users
 Content-Type: application/json
+X-RestiveClient-JsonPatch: $.user.email={{$guid}}@example.com;$.user.timestamp={{$timestamp}};$.metadata.requestId={{$randomInt 1000 9999}};
 
 < ./payloads/user-template.json
 ```
@@ -50,11 +47,9 @@ Same capability for XML payloads:
 
 ```http
 ### Update SOAP envelope
-# @file ./payloads/soap-request.xml
-# @patch //soap:Header/auth:Token {{$aadToken}}
-# @patch //soap:Body/req:TransactionId {{$guid}}
 POST https://api.example.com/soap
 Content-Type: application/soap+xml
+X-RestiveClient-XmlPatch: //soap:Header/auth:Token={{$aadToken}};//soap:Body/req:TransactionId={{$guid}};
 
 < ./payloads/soap-request.xml
 ```
