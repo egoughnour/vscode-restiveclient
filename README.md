@@ -5,7 +5,182 @@
 [![Open in Visual Studio Code](https://img.shields.io/static/v1?logo=visualstudiocode&label=&message=Open%20in%20Visual%20Studio%20Code&labelColor=2c2c32&color=007acc&logoColor=007acc)](https://open.vscode.dev/egoughnour/vscode-restiveclient) [![Join the chat at https://gitter.im/egoughnour/vscode-restiveclient](https://badges.gitter.im/egoughnour/vscode-restiveclient.svg)](https://gitter.im/egoughnour/vscode-restiveclient?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Marketplace Version](https://vsmarketplacebadges.dev/version-short/egoughnour.restive-client.svg)](https://marketplace.visualstudio.com/items?itemName=egoughnour.restive-client) [![Downloads](https://vsmarketplacebadges.dev/downloads-short/egoughnour.restive-client.svg
 )](https://marketplace.visualstudio.com/items?itemName=egoughnour.restive-client) [![Installs](https://vsmarketplacebadges.dev/installs-short/egoughnour.restive-client.svg)](https://marketplace.visualstudio.com/items?itemName=egoughnour.restive-client) [![Rating](https://vsmarketplacebadges.dev/rating-short/egoughnour.restive-client.svg)](https://marketplace.visualstudio.com/items?itemName=egoughnour.restive-client)
 
-Restive Client allows you to send HTTP request and view the response in Visual Studio Code directly. It eliminates the need for a separate tool to test REST APIs and makes API testing convenient and efficient.
+Restive Client allows you to send HTTP requests and view the responses in Visual Studio Code directly. It eliminates the need for a separate tool to test REST APIs and makes API testing convenient and efficient.
+
+## Fork Enhancements
+
+This fork of [REST Client](https://github.com/Huachao/vscode-restclient) adds several features focused on **dynamic request body manipulation** and **AI-assisted code generation**. These enhancements address limitations in the original extension when working with complex API workflows.
+
+### Pre-Request Body Patching
+
+The original REST Client requires request bodies to be fully templated inline. This fork adds support for **patching external files** before they're sent as request bodies—useful when working with large JSON/XML payloads that shouldn't be templated. See [Body Patching](#body-patching) and following sections for more details.
+ 
+#### JSONPath Patching
+
+Update specific values in JSON files before sending:
+The magic happens in the Custom Header.
+```http
+### Create user with dynamic data
+POST https://api.example.com/users
+Content-Type: application/json
+X-RestiveClient-JsonPatch: $.user.email={{$guid}}@example.com;$.user.timestamp={{$timestamp}};$.metadata.requestId={{$randomInt 1000 9999}};
+
+< ./payloads/user-template.json
+```
+
+The `user-template.json` file remains clean and un-templated:
+```json
+{
+  "user": {
+    "email": "placeholder@example.com",
+    "timestamp": "2024-01-01T00:00:00Z"
+  },
+  "metadata": {
+    "requestId": 0
+  }
+}
+```
+
+#### XPath Patching
+
+Same capability for XML payloads:
+
+```http
+### Update SOAP envelope
+POST https://api.example.com/soap
+Content-Type: application/soap+xml
+X-RestiveClient-XmlPatch: //soap:Header/auth:Token={{$aadToken}};//soap:Body/req:TransactionId={{$guid}};
+
+< ./payloads/soap-request.xml
+```
+
+### Why Patching Matters
+
+| Scenario | Without Patching | With Patching |
+|----------|------------------|---------------|
+| Large JSON bodies (100+ lines) | Must inline everything in .http file | Keep payloads in separate files |
+| Shared payloads across requests | Duplicate the entire body | Reference same file, patch differently |
+| XML/SOAP with namespaces | Complex escaping in templates | Clean XML files with XPath patches |
+| Schema validation | Templates break JSON schema tools | Valid JSON/XML files work with tooling |
+
+---
+
+### AI-Assisted Code Generation *(In Development)*
+
+> **Branch:** `feature/ai-codegen` | **Status:** Feature complete, testing in progress
+
+This feature uses an external AI API to generate typed client code from your .http file sequences. Instead of simple code snippets, it analyzes the **full request/response workflow** and generates properly structured method bodies.
+
+#### How It Works
+
+1. **Capture Workflow**: Define a sequence of related requests (auth → fetch → transform)
+2. **Record Responses**: Execute requests and capture response structures
+3. **Generate Code**: AI weaves variables, requests, and responses into cohesive methods
+
+#### Example Workflow
+
+```http
+### @workflow userOnboarding
+### Step 1: Authenticate
+# @name authResponse
+POST https://api.example.com/auth
+Content-Type: application/json
+
+{"client_id": "{{clientId}}", "client_secret": "{{clientSecret}}"}
+
+### Step 2: Create user (uses auth token)
+# @name createUserResponse
+POST https://api.example.com/users
+Authorization: Bearer {{authResponse.response.body.access_token}}
+Content-Type: application/json
+
+< ./payloads/new-user.json
+
+### Step 3: Fetch created user
+# @name getUserResponse
+GET https://api.example.com/users/{{createUserResponse.response.body.id}}
+Authorization: Bearer {{authResponse.response.body.access_token}}
+```
+
+#### Generated Output (Python)
+
+```python
+from dataclasses import dataclass
+from typing import Optional
+import httpx
+
+@dataclass
+class AuthResponse:
+    access_token: str
+    expires_in: int
+    token_type: str
+
+@dataclass
+class User:
+    id: str
+    email: str
+    created_at: str
+
+class UserOnboardingClient:
+    def __init__(self, base_url: str, client_id: str, client_secret: str):
+        self.base_url = base_url
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self._token: Optional[str] = None
+
+    def authenticate(self) -> AuthResponse:
+        """Step 1: Authenticate and store token"""
+        response = httpx.post(
+            f"{self.base_url}/auth",
+            json={"client_id": self.client_id, "client_secret": self.client_secret}
+        )
+        response.raise_for_status()
+        auth = AuthResponse(**response.json())
+        self._token = auth.access_token
+        return auth
+
+    def create_user(self, user_data: dict) -> User:
+        """Step 2: Create user with stored auth token"""
+        response = httpx.post(
+            f"{self.base_url}/users",
+            headers={"Authorization": f"Bearer {self._token}"},
+            json=user_data
+        )
+        response.raise_for_status()
+        return User(**response.json())
+
+    def get_user(self, user_id: str) -> User:
+        """Step 3: Fetch user by ID"""
+        response = httpx.get(
+            f"{self.base_url}/users/{user_id}",
+            headers={"Authorization": f"Bearer {self._token}"}
+        )
+        response.raise_for_status()
+        return User(**response.json())
+```
+
+#### Planned Improvements
+
+- [ ] **Type inference from responses**: Automatically generate dataclasses/interfaces from actual response shapes
+- [ ] **Typed patching**: Infer types for patched values and generate typed setters
+- [ ] **Native structured responses**: Direct integration with AI structured output APIs for guaranteed schema compliance
+
+---
+
+### Attribution
+
+This fork builds on the excellent work of the original [REST Client](https://github.com/Huachao/vscode-restclient) by [Huachao Mao](https://github.com/Huachao) and its 60+ contributors.
+
+**Fork-specific changes:**
+- Pre-request body patching (JSONPath, XPath)
+- AI-assisted code generation workflow
+- Enhanced file variable preprocessing
+
+---
+
+*For the original REST Client features, see the [Main Features](#main-features) section below.*
+
+---
 
 ## Main Features
 * Pre-request modification of non-templated files (_i.e._, __file__ custom variables), including updates via:
